@@ -66,3 +66,6 @@ def FazerPost(texto, usuario):
 
     dados = ler_json()
     return postar_no_linkedin(dados[usuario]['token'], f"urn:li:person:{dados[usuario]['urn']}", texto)
+
+if __name__ == "__main__":
+    FazerPost("Teste de post via API", "Luigi")
