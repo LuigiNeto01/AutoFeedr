@@ -25,10 +25,10 @@ if __name__ == "__main__":
                 print(f"Nenhum artigo encontrado para o topico: ({exec_config['topic']}).")
                 continue
 
-            print(f"Artigo encontrado: {str(articles)}")
+            print(f"Artigo encontrado: {str(articles[exec_config['topic']])}")
             
             # Escreve o texto do Post
-            texto_post = gerar_post(str(articles))
+            texto_post = gerar_post(str(articles[exec_config['topic']]))
             print(f"Post Gerado: {texto_post}")
 
             FazerPost(texto_post, exec_config['user'])

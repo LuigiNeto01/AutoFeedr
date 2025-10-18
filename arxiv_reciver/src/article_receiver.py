@@ -106,7 +106,7 @@ def fetch_articles_by_topics(
 
     Returns:
         Dicionário com o tema como chave e a lista de artigos como valor.
-        Inclui a chave "_consulta_intervalo" com o período usado na busca.
+        Inclui a chave "intervalo_consulta" com o período usado na busca.
     """
     normalized_topics = _normalize_topics(topics)
 
@@ -124,7 +124,7 @@ def fetch_articles_by_topics(
     for topic in normalized_topics:
         catalog[topic] = _search_topic(topic, date_constraint, per_topic)
     serialized_results = _serialize_results(catalog)
-    serialized_results["_consulta_intervalo"] = {
+    serialized_results["intervalo_consulta"] = {
         "inicio": resolved_start.isoformat(),
         "fim": resolved_end.isoformat(),
     }
