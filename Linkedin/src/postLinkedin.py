@@ -14,23 +14,26 @@ def postar_no_linkedin(token, author_urn, texto):
     Ano_Mes_Anterior = (datetime.now() - timedelta(days=30)).strftime("%Y%m")
 
 
-    url = "https://api.linkedin.com/rest/posts"
+    url = "https://api.linkedin.com/v2/ugcPosts"
     headers = {
         "Authorization": f"Bearer {token}",
         "LinkedIn-Version": f"{Ano_Mes_Anterior}",
+        "X-Restli-Protocol-Version": "2.0.0",
         "Content-Type": "application/json"
     }
     data = {
-        "author": author_urn,
-        "commentary": texto,
-        "visibility": "PUBLIC",
-        "lifecycleState": "PUBLISHED",
-        "distribution": {
-            "feedDistribution": "MAIN_FEED",
-            "targetEntities": [],
-            "thirdPartyDistributionChannels": []
+            "author": author_urn,
+            "lifecycleState": "PUBLISHED",
+            "specificContent": {
+                "com.linkedin.ugc.ShareContent": {
+                    "shareCommentary": {"text": texto},
+                    "shareMediaCategory": "NONE"
+                }
+            },
+            "visibility": {
+                "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+            }
         }
-    }
 
     resp = requests.post(url, headers=headers, json=data)
     if resp.status_code in (200, 201):
@@ -38,7 +41,7 @@ def postar_no_linkedin(token, author_urn, texto):
         return True
     else:
         print(f"Erro ao postar ({resp.status_code}): {resp.text}")
-        raise f"Erro ao postar ({resp.status_code})"
+        raise
 
 if __name__ == "__main__":
     postar_no_linkedin(
