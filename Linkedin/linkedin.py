@@ -1,4 +1,4 @@
-from src import *
+from .src import *
 
 from datetime import datetime
 import requests

@@ -1,0 +1,168 @@
+{
+  "machine learning": [
+    {
+      "title": "The Mathematical Theory of Behavioural Swarms: Towards Modelling the Collective Dynamics of Living Systems",
+      "summary": "Classical swarm models, exemplified by the Cucker--Smale framework, provide\nfoundational insights into collective alignment but exhibit fundamental\nlimitations in capturing the adaptive, heterogeneous behaviours intrinsic to\nliving systems. This paper formalises the mathematical theory of\n\\textit{Behavioural Swarms}, a comprehensive framework where each particle's\nstate incorporates a dynamic internal variable, the \\textit{activity} that\nco-evolves with position and velocity through nonlocal interactions. We\ndemonstrate how this approach transcends prior models by integrating adaptive\ndecision-making mechanisms and heterogeneous behavioural states into rigorous\ndifferential systems. Through applications in behavioural economics and crowd\ndynamics, we establish the theory's capacity to predict emergent macroscopic\npatterns from individual behavioural states. Our critical analysis positions\nthis framework against kinetic theories of active particles and agent-based\napproaches, revealing distinct advantages for modelling systems where\nindividual agency drives collective outcomes.",
+      "authors": [
+        "Rene Fabregas",
+        "Jie Liao",
+        "Nisrine Outada"
+      ],
+      "published": "2025-08-16T23:57:26+00:00",
+      "updated": "2025-09-05T08:56:20+00:00",
+      "url": "http://arxiv.org/abs/2508.12183v2"
+    },
+    {
+      "title": "Mesh Processing Non-Meshes via Neural Displacement Fields",
+      "summary": "Mesh processing pipelines are mature, but adapting them to newer non-mesh\nsurface representations -- which enable fast rendering with compact file size\n-- requires costly meshing or transmitting bulky meshes, negating their core\nbenefits for streaming applications.\n  We present a compact neural field that enables common geometry processing\ntasks across diverse surface representations. Given an input surface, our\nmethod learns a neural map from its coarse mesh approximation to the surface.\nThe full representation totals only a few hundred kilobytes, making it ideal\nfor lightweight transmission. Our method enables fast extraction of manifold\nand Delaunay meshes for intrinsic shape analysis, and compresses scalar fields\nfor efficient delivery of costly precomputed results. Experiments and\napplications show that our fast, compact, and accurate approach opens up new\npossibilities for interactive geometry processing.",
+      "authors": [
+        "Yuta Noma",
+        "Zhecheng Wang",
+        "Chenxi Liu",
+        "Karan Singh",
+        "Alec Jacobson"
+      ],
+      "published": "2025-08-16T23:31:13+00:00",
+      "updated": "2025-08-16T23:31:13+00:00",
+      "url": "http://arxiv.org/abs/2508.12179v1"
+    }
+  ],
+  "quantum computing": [
+    {
+      "title": "CAN Networks Security in Smart Grids Communication Technologies",
+      "summary": "The rapid evolution of smart grids requires effective communication protocols\nto transfer data reliably and securely. Controller Area Network (CAN) is one of\nthe most recognized protocols that offer reliable data transmission in smart\ngrids due to its robustness, real-time capabilities, and relatively low initial\ncost of its required hardware. However, as a smart city becomes more\ninterconnected, it also becomes more vulnerable to cyber-attacks. As there are\nmany mechanisms to secure the CAN nodes from attacks, most of those mechanisms\nhave computational overhead, resulting in more delay in the network. We\nimplemented a solution that requires almost no overhead to any CAN node\nconnected to the network. It depends on a single node responsible for securing\nthe CAN network. This approach seeks to augment network security while reducing\nsecurity mechanisms overhead to all CAN network nodes. The methodology and\ncomprehensive test results will be presented in detail during a subsequent\ndiscussion. The used software for development is Code Composer Studio, and the\nused microcontroller evaluation boards (EVB) are TM4C 1294.",
+      "authors": [
+        "Ayman W. Baharia",
+        "Khaled T. Naga",
+        "Hesham S. Abdelfattah",
+        "Shady A. Maged",
+        "Sherif A. Hammad"
+      ],
+      "published": "2025-08-16T23:36:24+00:00",
+      "updated": "2025-08-16T23:36:24+00:00",
+      "url": "http://arxiv.org/abs/2508.12181v1"
+    },
+    {
+      "title": "Convection in a Rapidly Rotating Spherical Shell: Newton's Method Using Implicit Coriolis Integration",
+      "summary": "Geophysical flows are characterized by rapid rotation. Simulating these flows\nrequires small timesteps to achieve stability and accuracy. Numerical stability\ncan be greatly improved by the implicit integration of the terms that are most\nresponsible for destabilizing the numerical scheme. We have implemented an\nimplicit treatment of the Coriolis force in a rotating spherical shell driven\nby a radial thermal gradient. We modified the resulting timestepping code to\ncarry out steady-state solving via Newton's method, which has no timestepping\nerror. The implicit terms have the effect of preconditioning the linear\nsystems, which can then be rapidly solved by a matrix-free Krylov method. We\ncomputed the branches of rotating waves with azimuthal wavenumbers ranging from\n4 to 12. As the Ekman number (the non-dimensionalized inverse rotation rate)\ndecreases, the flows are increasingly axially independent and localized near\nthe inner cylinder, in keeping with well-known theoretical predictions and\nprevious experimental and numerical results. The advantage of the implicit over\nthe explicit treatment also increases dramatically with decreasing Ekman\nnumbers, reducing the cost of computation by as much as a factor of 20 for\nEkman numbers of order of $10^{-5}$. We carried out continuation for both the\nRayleigh and Ekman numbers and obtained interesting branches in which the drift\nvelocity remained unchanged between pairs of saddle-node bifurcations.",
+      "authors": [
+        "Juan Cruz Gonzalez Sembla",
+        "Camille Rambert",
+        "Fred Feudel",
+        "Laurette S. Tuckerman"
+      ],
+      "published": "2025-08-16T23:12:26+00:00",
+      "updated": "2025-08-16T23:12:26+00:00",
+      "url": "http://arxiv.org/abs/2508.16635v1"
+    }
+  ],
+  "natural language processing": [
+    {
+      "title": "Exploring Gender Differences in Tertiary Mathematics-Intensive Fields: A Critical Review of Social Cognitive Career Theory",
+      "summary": "Social Cognitive Career Theory (SCCT) has been extensively employed to\nelucidate the enduring gender differences in mathematics-intensive fields, with\na particular emphasis on the complex interplay of motivational factors and\nextra-personal influences contributing to the underrepresentation of women.\nAlthough a plethora of empirical studies corroborate SCCT, three crucial\naspects for refinement have come to the fore. First, the theory should place a\nmore substantial emphasis on how cultural and contextual diversity influences\nacademic choices. Second, given the dynamic nature of motivation, which evolves\nover time, more longitudinal analyses are imperative to capture their temporal\ntrajectory, in contrast to the predominantly cross-sectional empirical studies.\nFinally, considering the intricate interplay between emotion and motivation,\nintegrating the dimension of emotion into SCCT would significantly augment its\nexplanatory power and provide a more comprehensive understanding of academic\nselection processes.",
+      "authors": [
+        "Huayu Gao",
+        "Tanya Evans",
+        "Gavin Brown"
+      ],
+      "published": "2025-08-16T23:32:54+00:00",
+      "updated": "2025-08-16T23:32:54+00:00",
+      "url": "http://arxiv.org/abs/2508.12180v1"
+    },
+    {
+      "title": "Mesh Processing Non-Meshes via Neural Displacement Fields",
+      "summary": "Mesh processing pipelines are mature, but adapting them to newer non-mesh\nsurface representations -- which enable fast rendering with compact file size\n-- requires costly meshing or transmitting bulky meshes, negating their core\nbenefits for streaming applications.\n  We present a compact neural field that enables common geometry processing\ntasks across diverse surface representations. Given an input surface, our\nmethod learns a neural map from its coarse mesh approximation to the surface.\nThe full representation totals only a few hundred kilobytes, making it ideal\nfor lightweight transmission. Our method enables fast extraction of manifold\nand Delaunay meshes for intrinsic shape analysis, and compresses scalar fields\nfor efficient delivery of costly precomputed results. Experiments and\napplications show that our fast, compact, and accurate approach opens up new\npossibilities for interactive geometry processing.",
+      "authors": [
+        "Yuta Noma",
+        "Zhecheng Wang",
+        "Chenxi Liu",
+        "Karan Singh",
+        "Alec Jacobson"
+      ],
+      "published": "2025-08-16T23:31:13+00:00",
+      "updated": "2025-08-16T23:31:13+00:00",
+      "url": "http://arxiv.org/abs/2508.12179v1"
+    }
+  ],
+  "computer vision": [
+    {
+      "title": "Scalable RF Simulation in Generative 4D Worlds",
+      "summary": "Radio Frequency (RF) sensing has emerged as a powerful, privacy-preserving\nalternative to vision-based methods for indoor perception tasks. However,\ncollecting high-quality RF data in dynamic and diverse indoor environments\nremains a major challenge. To address this, we introduce WaveVerse, a\nprompt-based, scalable framework that simulates realistic RF signals from\ngenerated indoor scenes with human motions. WaveVerse introduces a\nlanguage-guided 4D world generator, which includes a state-aware causal\ntransformer for human motion generation conditioned on spatial constraints and\ntexts, and a phase-coherent ray tracing simulator that enables the simulation\nof accurate and coherent RF signals. Experiments demonstrate the effectiveness\nof our approach in conditioned human motion generation and highlight how phase\ncoherence is applied to beamforming and respiration monitoring. We further\npresent two case studies in ML-based high-resolution imaging and human activity\nrecognition, demonstrating that WaveVerse not only enables data generation for\nRF imaging for the first time, but also consistently achieves performance gain\nin both data-limited and data-adequate scenarios.",
+      "authors": [
+        "Zhiwei Zheng",
+        "Dongyin Hu",
+        "Mingmin Zhao"
+      ],
+      "published": "2025-08-16T23:02:14+00:00",
+      "updated": "2025-08-16T23:02:14+00:00",
+      "url": "http://arxiv.org/abs/2508.12176v1"
+    },
+    {
+      "title": "RealTalk: Realistic Emotion-Aware Lifelike Talking-Head Synthesis",
+      "summary": "Emotion is a critical component of artificial social intelligence. However,\nwhile current methods excel in lip synchronization and image quality, they\noften fail to generate accurate and controllable emotional expressions while\npreserving the subject's identity. To address this challenge, we introduce\nRealTalk, a novel framework for synthesizing emotional talking heads with high\nemotion accuracy, enhanced emotion controllability, and robust identity\npreservation. RealTalk employs a variational autoencoder (VAE) to generate 3D\nfacial landmarks from driving audio, which are concatenated with emotion-label\nembeddings using a ResNet-based landmark deformation model (LDM) to produce\nemotional landmarks. These landmarks and facial blendshape coefficients jointly\ncondition a novel tri-plane attention Neural Radiance Field (NeRF) to\nsynthesize highly realistic emotional talking heads. Extensive experiments\ndemonstrate that RealTalk outperforms existing methods in emotion accuracy,\ncontrollability, and identity preservation, advancing the development of\nsocially intelligent AI systems.",
+      "authors": [
+        "Wenqing Wang",
+        "Yun Fu"
+      ],
+      "published": "2025-08-16T21:28:22+00:00",
+      "updated": "2025-08-16T21:28:22+00:00",
+      "url": "http://arxiv.org/abs/2508.12163v1"
+    }
+  ],
+  "reinforcement learning": [
+    {
+      "title": "The Mathematical Theory of Behavioural Swarms: Towards Modelling the Collective Dynamics of Living Systems",
+      "summary": "Classical swarm models, exemplified by the Cucker--Smale framework, provide\nfoundational insights into collective alignment but exhibit fundamental\nlimitations in capturing the adaptive, heterogeneous behaviours intrinsic to\nliving systems. This paper formalises the mathematical theory of\n\\textit{Behavioural Swarms}, a comprehensive framework where each particle's\nstate incorporates a dynamic internal variable, the \\textit{activity} that\nco-evolves with position and velocity through nonlocal interactions. We\ndemonstrate how this approach transcends prior models by integrating adaptive\ndecision-making mechanisms and heterogeneous behavioural states into rigorous\ndifferential systems. Through applications in behavioural economics and crowd\ndynamics, we establish the theory's capacity to predict emergent macroscopic\npatterns from individual behavioural states. Our critical analysis positions\nthis framework against kinetic theories of active particles and agent-based\napproaches, revealing distinct advantages for modelling systems where\nindividual agency drives collective outcomes.",
+      "authors": [
+        "Rene Fabregas",
+        "Jie Liao",
+        "Nisrine Outada"
+      ],
+      "published": "2025-08-16T23:57:26+00:00",
+      "updated": "2025-09-05T08:56:20+00:00",
+      "url": "http://arxiv.org/abs/2508.12183v2"
+    },
+    {
+      "title": "Mesh Processing Non-Meshes via Neural Displacement Fields",
+      "summary": "Mesh processing pipelines are mature, but adapting them to newer non-mesh\nsurface representations -- which enable fast rendering with compact file size\n-- requires costly meshing or transmitting bulky meshes, negating their core\nbenefits for streaming applications.\n  We present a compact neural field that enables common geometry processing\ntasks across diverse surface representations. Given an input surface, our\nmethod learns a neural map from its coarse mesh approximation to the surface.\nThe full representation totals only a few hundred kilobytes, making it ideal\nfor lightweight transmission. Our method enables fast extraction of manifold\nand Delaunay meshes for intrinsic shape analysis, and compresses scalar fields\nfor efficient delivery of costly precomputed results. Experiments and\napplications show that our fast, compact, and accurate approach opens up new\npossibilities for interactive geometry processing.",
+      "authors": [
+        "Yuta Noma",
+        "Zhecheng Wang",
+        "Chenxi Liu",
+        "Karan Singh",
+        "Alec Jacobson"
+      ],
+      "published": "2025-08-16T23:31:13+00:00",
+      "updated": "2025-08-16T23:31:13+00:00",
+      "url": "http://arxiv.org/abs/2508.12179v1"
+    }
+  ],
+  "Computer Science": [
+    {
+      "title": "The Mathematical Theory of Behavioural Swarms: Towards Modelling the Collective Dynamics of Living Systems",
+      "summary": "Classical swarm models, exemplified by the Cucker--Smale framework, provide\nfoundational insights into collective alignment but exhibit fundamental\nlimitations in capturing the adaptive, heterogeneous behaviours intrinsic to\nliving systems. This paper formalises the mathematical theory of\n\\textit{Behavioural Swarms}, a comprehensive framework where each particle's\nstate incorporates a dynamic internal variable, the \\textit{activity} that\nco-evolves with position and velocity through nonlocal interactions. We\ndemonstrate how this approach transcends prior models by integrating adaptive\ndecision-making mechanisms and heterogeneous behavioural states into rigorous\ndifferential systems. Through applications in behavioural economics and crowd\ndynamics, we establish the theory's capacity to predict emergent macroscopic\npatterns from individual behavioural states. Our critical analysis positions\nthis framework against kinetic theories of active particles and agent-based\napproaches, revealing distinct advantages for modelling systems where\nindividual agency drives collective outcomes.",
+      "authors": [
+        "Rene Fabregas",
+        "Jie Liao",
+        "Nisrine Outada"
+      ],
+      "published": "2025-08-16T23:57:26+00:00",
+      "updated": "2025-09-05T08:56:20+00:00",
+      "url": "http://arxiv.org/abs/2508.12183v2"
+    },
+    {
+      "title": "Nanoconfined Grain Boundaries Increase Conductivity of Polycrystalline Molecular Crystals",
+      "summary": "Soft-solid molecular crystals consist of crystalline grains and fluid grain\nboundaries (GB) that enhance the grain binding and transport of Li+ ions\nbetween the grains. The total ionic conductivity consists of ion migration in\nboth the grains and GBs. To unravel these contributions in adiponitrile\n(Adpn)-LiPF6 molecular crystals, the GB volume fraction was varied by changing\nthe size of the crystals and the adiponitrile-LiPF6 molar ratio. Molecular\ndynamic (MD) simulations indicate that ion motion was sub-diffusive in the\ngrains and 'well-diffusive' in the GBs, with GBs characterized as disordered\nnano-confined regions of higher charge carrier concentration (~1M) than in\nsaturated LiPF6-Adpn solutions (0.04M), and ions predominantly solvated by -CN\ngroups with few contact ion pairs. The diffusivity in the GBs is at least an\norder of magnitude higher than in the crystalline grains. The emergent picture\nis the grains as a reservoir of ions that migrate to the faster-conducting GBs.",
+      "authors": [
+        "Shujit Chandra Paul",
+        "William A. Goddard III",
+        "Michael J. Zdilla",
+        "Prabhat Prakash",
+        "Stephanie L. Wunder"
+      ],
+      "published": "2025-08-16T22:22:02+00:00",
+      "updated": "2025-09-07T07:20:00+00:00",
+      "url": "http://arxiv.org/abs/2508.12172v2"
+    }
+  ]
+}

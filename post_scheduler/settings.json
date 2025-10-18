@@ -1,0 +1,29 @@
+{
+  "users": [
+    {
+        "name": "Luigi",
+        "schedule": [
+            {
+                "day": "tue",
+                "time": "11:00",
+                "topic": "machine learning"
+            },
+            {
+                "day": "wed",
+                "time": "16:00",
+                "topic": "Robotic Process Automation"
+            },
+            {
+                "day": "thu",
+                "time": "15:30",
+                "topic": "Computer Science"
+            },
+            {
+                "day": "fri",
+                "time": "10:00",
+                "topic": "LLM"
+            }
+        ]
+    }
+  ]
+}

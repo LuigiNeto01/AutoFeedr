@@ -1,5 +1,5 @@
-from src.prompt import PROMPT_GERACAO_POST, PROMPT_TRADUCAO
-from src.utils import conectar_gemini, gerar_resposta
+from .src.prompt import PROMPT_GERACAO_POST, PROMPT_TRADUCAO
+from .src.utils import conectar_gemini, gerar_resposta
 
 def gerar_post(informacoes: str) -> str:
 
