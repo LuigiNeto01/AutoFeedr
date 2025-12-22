@@ -2,8 +2,9 @@
 
 import json
 from datetime import datetime
+import os
 
-def exec_scheduler(date_time: str = None, settings_path: str = r'post_scheduler\settings.json'):
+def exec_scheduler(date_time: str = None, settings_path: str = os.path.join(os.getcwd(), 'post_scheduler', 'settings.json')):
     # If date_time is empty, use current time
     if not date_time:
         current_time = datetime.now()
