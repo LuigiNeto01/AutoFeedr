@@ -1,0 +1,10 @@
+services:
+  autofeedr:
+    build: .
+    container_name: autofeedr
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./post_scheduler/settings.json:/app/post_scheduler/settings.json:ro
+    restart: unless-stopped
