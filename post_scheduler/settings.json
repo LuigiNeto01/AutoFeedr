@@ -5,22 +5,22 @@
         "schedule": [
             {
                 "day": "mon",
-                "time": "20:16",
+                "time": "12:00",
                 "topic": "machine learning"
             },
             {
                 "day": "wed",
-                "time": "10:00",
+                "time": "13:00",
                 "topic": "Robotic Process Automation"
             },
             {
                 "day": "thu",
-                "time": "12:30",
+                "time": "15:30",
                 "topic": "Computer Science"
             },
             {
                 "day": "fri",
-                "time": "10:00",
+                "time": "13:00",
                 "topic": "LLM"
             }
         ]
