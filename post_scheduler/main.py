@@ -2,9 +2,9 @@
 
 import json
 from datetime import datetime
-import os
+from pathlib import Path
 
-def exec_scheduler(date_time: str = None, settings_path: str = os.path.join(os.getcwd(), 'post_scheduler', 'settings.json')):
+def exec_scheduler(date_time: str = None, settings_path: str | Path = None):
     # If date_time is empty, use current time
     if not date_time:
         current_time = datetime.now()
@@ -16,7 +16,11 @@ def exec_scheduler(date_time: str = None, settings_path: str = os.path.join(os.g
     current_hour_min = current_time.strftime('%H:%M')
 
     # Read settings file
-    with open(settings_path, 'r', encoding='utf-8') as f:
+    if settings_path is None:
+        settings_path = Path("post_scheduler") / "settings.json"
+    else:
+        settings_path = Path(settings_path)
+    with settings_path.open('r', encoding='utf-8') as f:
         config = json.load(f)
     
     config_users = config['users']

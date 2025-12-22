@@ -6,7 +6,7 @@ import os
 from .src.article_receiver import fetch_articles_by_topics
 
 DATA_DIR = Path("data")
-TEMP_OUTPUT = os.path.join(DATA_DIR, "temp_article.json")
+TEMP_OUTPUT = DATA_DIR / "temp_article.json"
 
 def get_article(topics: list[str], start: str = None, end: str = None, per_topic: int = 2, save_in_file: bool = False) -> dict:
     
@@ -49,4 +49,3 @@ if __name__ == "__main__":
         json.dumps(results, indent=2, ensure_ascii=False),
         encoding="utf-8",
     )
-
