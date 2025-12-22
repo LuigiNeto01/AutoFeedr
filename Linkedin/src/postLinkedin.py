@@ -41,7 +41,7 @@ def postar_no_linkedin(token, author_urn, texto):
         return True
     else:
         print(f"Erro ao postar ({resp.status_code}): {resp.text}")
-        raise
+        raise f"Erro ao postar ({resp.status_code}) - Quantidade de Caracteres: {len(resp.text)}"
 
 if __name__ == "__main__":
     postar_no_linkedin(
