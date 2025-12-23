@@ -4,7 +4,7 @@
         "name": "Luigi",
         "schedule": [
             {
-                "day": "mon",
+                "day": "tue",
                 "time": "12:00",
                 "topic": "machine learning"
             },
