@@ -27,6 +27,7 @@ def gerar_url_para_token():
 
     # Codificar e gerar a URL final
     url = f"{base_url}?{urllib.parse.urlencode(params)}"
+    print("URL de autorizacao do LinkedIn gerada.")
     return url
 
 
@@ -34,11 +35,13 @@ def gerar_url_para_token():
 def gerar_token_api(usuario, codigo):
     
     try:
+        print(f"Gerando token de acesso para usuario: {usuario}")
         token = gerar_token(client_id, client_secret, codigo, redirect_uri)
         
         data = {usuario: {'token': token, 'DataToken': datetime.now().strftime("%d/%m/%Y %H:%M:%S")}}
 
         json_data(data)
+        print("Token salvo com sucesso.")
         return True
     
     except Exception as e:
@@ -48,6 +51,7 @@ def gerar_token_api(usuario, codigo):
 
 def gerar_urn(usuario):
     try:
+        print(f"Buscando URN para usuario: {usuario}")
         dados = ler_json()
         headers = {"Authorization": f"Bearer {dados[usuario]['token']}"}
 
@@ -55,6 +59,7 @@ def gerar_urn(usuario):
         data = {usuario: {'urn': r.json()['sub']}}
 
         json_data(data)
+        print("URN salvo com sucesso.")
 
         return True
     
@@ -64,6 +69,10 @@ def gerar_urn(usuario):
 
 def FazerPost(texto, usuario):
 
+    print(f"Publicando post para usuario: {usuario}")
+    if not texto:
+        print("Texto vazio. Publicacao cancelada.")
+        return False
     dados = ler_json()
     return postar_no_linkedin(dados[usuario]['token'], f"urn:li:person:{dados[usuario]['urn']}", texto)
 

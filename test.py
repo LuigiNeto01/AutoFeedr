@@ -3,6 +3,7 @@ from Linkedin import FazerPost
 from Escritor import gerar_post
 
 if __name__ == "__main__":
+    print("Iniciando teste manual de fluxo completo...")
     # Busca o Artigo
     articles = get_article(
         topics=["machine learning"],
@@ -15,6 +16,10 @@ if __name__ == "__main__":
     
     # Escreve o texto do Post
     texto_post = gerar_post(str(articles))
-    print(f"Post Gerado: {texto_post}")
-
-    FazerPost(texto_post, "Luigi")
+    if not texto_post:
+        print("Post nao gerado. Publicacao cancelada.")
+        print("Teste finalizado.")
+    else:
+        print(f"Post Gerado: {texto_post}")
+        FazerPost(texto_post, "Luigi")
+        print("Teste finalizado.")

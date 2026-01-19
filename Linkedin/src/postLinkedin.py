@@ -11,6 +11,7 @@ logger.addHandler(handler)
 def postar_no_linkedin(token, author_urn, texto):
 
         
+    # Usa versao da API baseada no mes anterior.
     Ano_Mes_Anterior = (datetime.now() - timedelta(days=30)).strftime("%Y%m")
 
 
@@ -35,8 +36,10 @@ def postar_no_linkedin(token, author_urn, texto):
             }
         }
 
+    print("Enviando post para o LinkedIn...")
     resp = requests.post(url, headers=headers, json=data)
     if resp.status_code in (200, 201):
+        print(f"URN do autor: {author_urn}")
         print("Post publicado com sucesso 🎉")
         return True
     else:

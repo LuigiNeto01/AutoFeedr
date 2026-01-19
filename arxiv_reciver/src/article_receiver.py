@@ -22,6 +22,7 @@ def _normalize_topics(topics: Iterable[str]) -> List[str]:
         raise ValueError("A lista de assuntos não pode ser vazia.")
 
     normalized = [topic.strip() for topic in topics if topic and topic.strip()]
+    print(f"Topics normalizados: {normalized}")
     if not normalized:
         raise ValueError("Todos os assuntos informados são vazios ou inválidos.")
     return normalized
@@ -57,6 +58,7 @@ def _search_topic(
     max_results: int,
 ) -> List[ArxivArticle]:
     search_query = f"all:{topic} AND {date_constraint}"
+    print(f"Consultando arXiv: {search_query} (max_results={max_results})")
     search = arxiv.Search(
         query=search_query,
         max_results=max_results,
@@ -110,6 +112,7 @@ def fetch_articles_by_topics(
     """
     normalized_topics = _normalize_topics(topics)
 
+    # Define intervalo padrao (dia anterior) quando datas nao sao informadas.
     now_utc = datetime.now(UTC)
     previous_day = (now_utc - timedelta(days=1)).date()
     default_start = datetime.combine(previous_day, time.min, tzinfo=UTC)
@@ -119,6 +122,7 @@ def fetch_articles_by_topics(
     resolved_start = _ensure_datetime(start_date, default_start)
 
     date_constraint = _build_date_range(resolved_start, resolved_end)
+    print(f"Intervalo de consulta: {resolved_start.isoformat()} ate {resolved_end.isoformat()}")
 
     catalog: Dict[str, List[ArxivArticle]] = {}
     for topic in normalized_topics:

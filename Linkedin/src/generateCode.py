@@ -2,6 +2,7 @@ import requests
 
 
 def gerar_token(client_id, client_secret, code, redirect_uri):
+    # Troca o code de autorizacao pelo token de acesso.
     url = "https://www.linkedin.com/oauth/v2/accessToken"
     data = {
         "grant_type": "authorization_code",
@@ -13,6 +14,7 @@ def gerar_token(client_id, client_secret, code, redirect_uri):
 
     print("Solicitando token de acesso 🔑")
     resp = requests.post(url, data=data)
+    print("Resposta do LinkedIn recebida.")
 
     if resp.status_code == 200:
         token = resp.json()["access_token"]

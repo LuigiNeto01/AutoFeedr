@@ -14,12 +14,14 @@ def exec_scheduler(date_time: str = None, settings_path: str | Path = None):
     # Get current day and time
     current_day = current_time.strftime('%a').lower()
     current_hour_min = current_time.strftime('%H:%M')
+    print(f"Checando agenda para {current_day} as {current_hour_min}")
 
     # Read settings file
     if settings_path is None:
         settings_path = Path("post_scheduler") / "settings.json"
     else:
         settings_path = Path(settings_path)
+    print(f"Lendo configuracoes em {settings_path}")
     with settings_path.open('r', encoding='utf-8') as f:
         config = json.load(f)
     
@@ -29,6 +31,7 @@ def exec_scheduler(date_time: str = None, settings_path: str | Path = None):
     for user in config_users:
         for schedule in user['schedule']:
             if schedule['day'] == current_day and schedule['time'] == current_hour_min:
+                print(f"Agenda encontrada para {user['name']} (topic={schedule['topic']})")
                 return {
                     'found': True,
                     'user': user['name'],
@@ -36,6 +39,7 @@ def exec_scheduler(date_time: str = None, settings_path: str | Path = None):
                     'time': schedule['time']
                 }
     
+    print("Nenhum agendamento correspondente encontrado.")
     return {'found': False}
 
 if __name__ == '__main__':

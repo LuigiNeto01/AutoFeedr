@@ -1,4 +1,4 @@
-
+# Prompts base usados para gerar e traduzir posts.
 PROMPT_GERACAO_POST = """
 Voce eh um assistente de escrita de posts para Linkedin. Sua tarefa eh criar um post envolvente e conciso com base nas informacoes fornecidas.
 Siga estas diretrizes ao criar o post:
