@@ -5,7 +5,7 @@ dotenv.load_dotenv()
 
 # Carrega configuracoes do ambiente.
 API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "models/gemini-pro-latest")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "models/gemini-2.5-flash")
 
 def conectar_gemini(api_key: str = API_KEY, modelo: str = GEMINI_MODEL):
     """
