@@ -30,7 +30,7 @@
         "schedule": [
             {
                 "day": "tue",
-                "time": "09:15",
+                "time": "12:15",
                 "topic": "LLM"
             },
             {
@@ -40,12 +40,12 @@
             },
             {
                 "day": "thu",
-                "time": "15:45",
+                "time": "18:45",
                 "topic": "Robotic Process Automation"
             },
             {
                 "day": "fri",
-                "time": "10:05",
+                "time": "14:05",
                 "topic": "Computer Science"
             }
         ]
