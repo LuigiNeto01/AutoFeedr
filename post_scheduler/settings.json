@@ -24,6 +24,31 @@
                 "topic": "LLM"
             }
         ]
+    },
+    {
+        "name": "Luigi2",
+        "schedule": [
+            {
+                "day": "tue",
+                "time": "09:15",
+                "topic": "LLM"
+            },
+            {
+                "day": "wed",
+                "time": "16:10",
+                "topic": "machine learning"
+            },
+            {
+                "day": "thu",
+                "time": "15:45",
+                "topic": "Robotic Process Automation"
+            },
+            {
+                "day": "fri",
+                "time": "10:05",
+                "topic": "Computer Science"
+            }
+        ]
     }
   ]
 }

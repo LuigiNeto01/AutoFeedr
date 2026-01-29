@@ -27,20 +27,23 @@ def exec_scheduler(date_time: str = None, settings_path: str | Path = None):
     
     config_users = config['users']
 
+    matches = []
     # Check each user's schedule
     for user in config_users:
         for schedule in user['schedule']:
             if schedule['day'] == current_day and schedule['time'] == current_hour_min:
                 print(f"Agenda encontrada para {user['name']} (topic={schedule['topic']})")
-                return {
-                    'found': True,
+                matches.append({
                     'user': user['name'],
                     'topic': schedule['topic'],
                     'time': schedule['time']
-                }
+                })
     
+    if matches:
+        return {'found': True, 'matches': matches}
+
     print("Nenhum agendamento correspondente encontrado.")
-    return {'found': False}
+    return {'found': False, 'matches': []}
 
 if __name__ == '__main__':
     exec_scheduler('', 'settings.json')

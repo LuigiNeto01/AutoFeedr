@@ -15,29 +15,30 @@ if __name__ == "__main__":
         print("Checando configuracao de agendamento...")
         exec_config = exec_scheduler()
         if exec_config['found']:
-            print(f"Agendamento encontrado para {exec_config['user']} no horario {exec_config['time']}.")
+            for schedule in exec_config['matches']:
+                print(f"Agendamento encontrado para {schedule['user']} no horario {schedule['time']}.")
 
-            # Busca o Artigo
-            articles = get_article(
-                topics=[exec_config['topic']],
-                per_topic=1,
-                save_in_file=True,
-            )
-            # verificando se foi encontrado algum arquivo
-            if not articles[exec_config['topic']]:
-                print(f"Nenhum artigo encontrado para o topico: ({exec_config['topic']}).")
-                continue
+                # Busca o Artigo
+                articles = get_article(
+                    topics=[schedule['topic']],
+                    per_topic=1,
+                    save_in_file=True,
+                )
+                # verificando se foi encontrado algum arquivo
+                if not articles[schedule['topic']]:
+                    print(f"Nenhum artigo encontrado para o topico: ({schedule['topic']}).")
+                    continue
 
-            print(f"Artigo encontrado: {str(articles[exec_config['topic']])}")
-            
-            # Escreve o texto do Post
-            texto_post = gerar_post(str(articles[exec_config['topic']]))
-            if not texto_post:
-                print("Post nao gerado. Publicacao cancelada.")
-                continue
-            print(f"Post Gerado: {texto_post}")
+                print(f"Artigo encontrado: {str(articles[schedule['topic']])}")
+                
+                # Escreve o texto do Post
+                texto_post = gerar_post(str(articles[schedule['topic']]))
+                if not texto_post:
+                    print("Post nao gerado. Publicacao cancelada.")
+                    continue
+                print(f"Post Gerado: {texto_post}")
 
-            FazerPost(texto_post, exec_config['user'])
-            print("Post enviado para o Linkedin.")
+                FazerPost(texto_post, schedule['user'])
+                print("Post enviado para o Linkedin.")
         else:
             print("Nenhum agendamento encontrado para este horario.")
