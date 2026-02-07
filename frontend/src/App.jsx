@@ -17,6 +17,7 @@ const WEEK_DAYS = [
   { key: 6, label: 'Sábado' },
   { key: 0, label: 'Domingo' },
 ]
+const TIME_SLOTS = Array.from({ length: 16 }, (_, idx) => `${String(idx + 7).padStart(2, '0')}:00`)
 
 async function api(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -129,6 +130,10 @@ export default function App() {
   const [jobs, setJobs] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [defaultPrompts, setDefaultPrompts] = useState({
+    prompt_generation: '',
+    prompt_translation: '',
+  })
 
   const [accountForm, setAccountForm] = useState({
     name: '',
@@ -174,9 +179,11 @@ export default function App() {
         api('/schedules'),
         api('/jobs?limit=50'),
       ])
+      const defaults = await api('/prompts/defaults')
       setAccounts(acc)
       setSchedules(sch)
       setJobs(jb)
+      setDefaultPrompts(defaults)
     } catch (e) {
       setError(`Falha ao carregar dados: ${e.message}`)
     } finally {
@@ -188,15 +195,29 @@ export default function App() {
     loadAll()
   }, [])
 
+  useEffect(() => {
+    if (!defaultPrompts.prompt_generation || !defaultPrompts.prompt_translation) return
+    setAccountForm((prev) => ({
+      ...prev,
+      prompt_generation: prev.prompt_generation || defaultPrompts.prompt_generation,
+      prompt_translation: prev.prompt_translation || defaultPrompts.prompt_translation,
+    }))
+  }, [defaultPrompts])
+
   const accountNameById = useMemo(
     () => Object.fromEntries(accounts.map((account) => [account.id, account.name])),
     [accounts]
   )
 
+  const filteredSchedules = useMemo(() => {
+    if (agendaAccountFilter === 'all') return schedules
+    return schedules.filter((schedule) => schedule.account_id === Number(agendaAccountFilter))
+  }, [schedules, agendaAccountFilter])
+
   const calendarData = useMemo(() => {
     const byDay = Object.fromEntries(WEEK_DAYS.map((d) => [d.key, []]))
     const complex = []
-    for (const schedule of schedules) {
+    for (const schedule of filteredSchedules) {
       const events = scheduleToCalendarEvents(schedule, accountNameById)
       for (const event of events) {
         if (event.complex) complex.push(event)
@@ -206,8 +227,21 @@ export default function App() {
     for (const day of WEEK_DAYS) {
       byDay[day.key].sort((a, b) => a.time.localeCompare(b.time))
     }
-    return { byDay, complex }
-  }, [schedules, accountNameById])
+    const byDayTime = Object.fromEntries(
+      WEEK_DAYS.map((day) => [
+        day.key,
+        Object.fromEntries(TIME_SLOTS.map((slot) => [slot, []])),
+      ])
+    )
+    for (const day of WEEK_DAYS) {
+      for (const event of byDay[day.key]) {
+        if (byDayTime[day.key][event.time]) {
+          byDayTime[day.key][event.time].push(event)
+        }
+      }
+    }
+    return { byDay, byDayTime, complex }
+  }, [filteredSchedules, accountNameById])
 
   const stats = useMemo(() => {
     const success = jobs.filter((job) => job.status === 'success').length
@@ -224,8 +258,8 @@ export default function App() {
         name: '',
         token: '',
         urn: '',
-        prompt_generation: '',
-        prompt_translation: '',
+        prompt_generation: defaultPrompts.prompt_generation,
+        prompt_translation: defaultPrompts.prompt_translation,
       })
       await loadAll()
     } catch (e) {
@@ -239,8 +273,8 @@ export default function App() {
       urn: account.urn,
       token: '',
       is_active: account.is_active,
-      prompt_generation: account.prompt_generation || '',
-      prompt_translation: account.prompt_translation || '',
+      prompt_generation: account.prompt_generation || defaultPrompts.prompt_generation || '',
+      prompt_translation: account.prompt_translation || defaultPrompts.prompt_translation || '',
     })
   }
 
@@ -333,6 +367,15 @@ export default function App() {
   }
 
   const recentJobs = jobs.slice(0, 8)
+  const [agendaAccountFilter, setAgendaAccountFilter] = useState('all')
+
+  function useCalendarSlot(dayOfWeek, timeLocal) {
+    setScheduleForm((prev) => ({
+      ...prev,
+      day_of_week: String(dayOfWeek),
+      time_local: timeLocal,
+    }))
+  }
 
   return (
     <div className="app-shell">
@@ -411,6 +454,19 @@ export default function App() {
                   <div className="form details-form">
                     <textarea placeholder="Prompt de geração (usa {informacoes})" value={accountForm.prompt_generation} onChange={(e) => setAccountForm({ ...accountForm, prompt_generation: e.target.value })} />
                     <textarea placeholder="Prompt de tradução (usa {post_portugues})" value={accountForm.prompt_translation} onChange={(e) => setAccountForm({ ...accountForm, prompt_translation: e.target.value })} />
+                    <button
+                      type="button"
+                      className="ghost"
+                      onClick={() =>
+                        setAccountForm({
+                          ...accountForm,
+                          prompt_generation: defaultPrompts.prompt_generation,
+                          prompt_translation: defaultPrompts.prompt_translation,
+                        })
+                      }
+                    >
+                      Recarregar prompt padrão
+                    </button>
                   </div>
                 </details>
                 <button type="submit">Salvar conta</button>
@@ -445,6 +501,19 @@ export default function App() {
                     <div className="form details-form">
                       <textarea placeholder="Prompt de geração (usa {informacoes})" value={editAccountForm.prompt_generation} onChange={(e) => setEditAccountForm({ ...editAccountForm, prompt_generation: e.target.value })} />
                       <textarea placeholder="Prompt de tradução (usa {post_portugues})" value={editAccountForm.prompt_translation} onChange={(e) => setEditAccountForm({ ...editAccountForm, prompt_translation: e.target.value })} />
+                      <button
+                        type="button"
+                        className="ghost"
+                        onClick={() =>
+                          setEditAccountForm({
+                            ...editAccountForm,
+                            prompt_generation: defaultPrompts.prompt_generation,
+                            prompt_translation: defaultPrompts.prompt_translation,
+                          })
+                        }
+                      >
+                        Usar prompt padrão
+                      </button>
                     </div>
                   </details>
                   <label className="check">
@@ -526,32 +595,53 @@ export default function App() {
             </section>
 
             <section className="calendar-wrap">
-              <h3>Calendário semanal de postagens</h3>
-              <div className="calendar-grid">
+              <div className="calendar-header">
+                <h3>Planner semanal de postagens</h3>
+                <div className="calendar-filters">
+                  <label>
+                    Conta:
+                    <select value={agendaAccountFilter} onChange={(e) => setAgendaAccountFilter(e.target.value)}>
+                      <option value="all">Todas</option>
+                      {accounts.map((account) => (
+                        <option key={account.id} value={account.id}>{account.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <div className="planner-grid">
+                <div className="planner-corner">Hora</div>
                 {WEEK_DAYS.map((day) => (
-                  <article key={day.key} className="calendar-day">
-                    <header>
-                      <span>{day.label}</span>
-                      <button
-                        type="button"
-                        className="tiny-btn"
-                        onClick={() => setScheduleForm({ ...scheduleForm, day_of_week: String(day.key) })}
-                      >
-                        usar
-                      </button>
-                    </header>
-                    <div className="calendar-items">
-                      {calendarData.byDay[day.key]?.length ? calendarData.byDay[day.key].map((event, index) => (
-                        <div key={`${event.schedule.id}-${index}`} className="calendar-item">
-                          <p className="time">{event.time}</p>
-                          <p>{event.label}</p>
-                          <button type="button" className="tiny-btn" onClick={() => openEditSchedule(event.schedule)}>
-                            editar
-                          </button>
+                  <div key={`head-${day.key}`} className="planner-head">{day.label}</div>
+                ))}
+                {TIME_SLOTS.map((slot) => (
+                  <div key={`row-${slot}`} className="planner-row">
+                    <div className="planner-time">{slot}</div>
+                    {WEEK_DAYS.map((day) => {
+                      const events = calendarData.byDayTime[day.key][slot] || []
+                      return (
+                        <div key={`${day.key}-${slot}`} className={`planner-cell ${events.length > 1 ? 'conflict' : ''}`}>
+                          {events.length === 0 && (
+                            <button
+                              type="button"
+                              className="slot-add"
+                              onClick={() => useCalendarSlot(day.key, slot)}
+                              title="Agendar neste horário"
+                            >
+                              +
+                            </button>
+                          )}
+                          {events.map((event, index) => (
+                            <div key={`${event.schedule.id}-${index}`} className="calendar-item">
+                              <p>{event.schedule.topic}</p>
+                              <small>{accountNameById[event.schedule.account_id] || `Conta #${event.schedule.account_id}`}</small>
+                              <button type="button" className="tiny-btn" onClick={() => openEditSchedule(event.schedule)}>editar</button>
+                            </div>
+                          ))}
                         </div>
-                      )) : <p className="empty">Sem postagens</p>}
-                    </div>
-                  </article>
+                      )
+                    })}
+                  </div>
                 ))}
               </div>
 

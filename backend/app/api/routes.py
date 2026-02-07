@@ -9,6 +9,7 @@ from app.core.security import build_fernet, encrypt_text
 from app.core.settings import settings
 from app.db.session import get_db
 from app.models.models import Job, LinkedinAccount, Schedule
+from Escritor.src.prompt import PROMPT_GERACAO_POST, PROMPT_TRADUCAO
 from app.schemas.schemas import (
     AccountCreate,
     AccountOut,
@@ -36,6 +37,14 @@ def _build_simple_weekly_cron(day_of_week: int, time_local: str) -> str:
 @router.get("/health")
 def healthcheck():
     return {"status": "ok", "service": "autofeedr-api"}
+
+
+@router.get("/prompts/defaults")
+def default_prompts():
+    return {
+        "prompt_generation": PROMPT_GERACAO_POST,
+        "prompt_translation": PROMPT_TRADUCAO,
+    }
 
 
 @router.get("/accounts", response_model=list[AccountOut])
