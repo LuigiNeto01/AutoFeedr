@@ -166,6 +166,7 @@ export default function App() {
     timezone: '',
     is_active: true,
   })
+  const [agendaAccountFilter, setAgendaAccountFilter] = useState('all')
 
   const [publishMode, setPublishMode] = useState('topic')
   const [jobForm, setJobForm] = useState({ account_id: '', topic: '', paper_url: '', paper_text: '' })
@@ -367,7 +368,6 @@ export default function App() {
   }
 
   const recentJobs = jobs.slice(0, 8)
-  const [agendaAccountFilter, setAgendaAccountFilter] = useState('all')
 
   function useCalendarSlot(dayOfWeek, timeLocal) {
     setScheduleForm((prev) => ({
