@@ -167,6 +167,8 @@ export default function App() {
     is_active: true,
   })
   const [agendaAccountFilter, setAgendaAccountFilter] = useState('all')
+  const [showSchedulesList, setShowSchedulesList] = useState(false)
+  const [isCreateScheduleModalOpen, setIsCreateScheduleModalOpen] = useState(false)
 
   const [publishMode, setPublishMode] = useState('topic')
   const [jobForm, setJobForm] = useState({ account_id: '', topic: '', paper_url: '', paper_text: '' })
@@ -316,6 +318,7 @@ export default function App() {
         time_local: '09:00',
         timezone: 'America/Sao_Paulo',
       })
+      setIsCreateScheduleModalOpen(false)
       await loadAll()
     } catch (e) {
       setError(`Erro ao criar agenda: ${e.message}`)
@@ -375,6 +378,7 @@ export default function App() {
       day_of_week: String(dayOfWeek),
       time_local: timeLocal,
     }))
+    setIsCreateScheduleModalOpen(true)
   }
 
   return (
@@ -532,72 +536,13 @@ export default function App() {
 
         {page === 'agenda' && (
           <>
-            <section className="panel-grid">
-              <article className="panel">
-                <h3>Cadastrar agenda</h3>
-                <form onSubmit={createSchedule} className="form">
-                  <select value={scheduleForm.account_id} onChange={(e) => setScheduleForm({ ...scheduleForm, account_id: e.target.value })} required>
-                    <option value="">Selecione a conta</option>
-                    {accounts.map((account) => (
-                      <option key={account.id} value={account.id}>{account.name}</option>
-                    ))}
-                  </select>
-                  <input placeholder="Tema" value={scheduleForm.topic} onChange={(e) => setScheduleForm({ ...scheduleForm, topic: e.target.value })} required />
-                  <select value={scheduleForm.day_of_week} onChange={(e) => setScheduleForm({ ...scheduleForm, day_of_week: e.target.value })} required>
-                    {WEEK_DAYS.map((day) => <option key={day.key} value={day.key}>{day.label}</option>)}
-                  </select>
-                  <input type="time" value={scheduleForm.time_local} onChange={(e) => setScheduleForm({ ...scheduleForm, time_local: e.target.value })} required />
-                  <input placeholder="Timezone" value={scheduleForm.timezone} onChange={(e) => setScheduleForm({ ...scheduleForm, timezone: e.target.value })} required />
-                  <button type="submit">Salvar agenda</button>
-                </form>
-              </article>
-
-              <article className="panel">
-                <h3>Agendas cadastradas</h3>
-                <ul className="agenda-list">
-                  {schedules.map((schedule) => (
-                    <li key={schedule.id}>
-                      <div>
-                        <strong>{schedule.topic}</strong>
-                        <p>{accountNameById[schedule.account_id] || `Conta #${schedule.account_id}`}</p>
-                        <p>
-                          Dia: {WEEK_DAYS.find((day) => day.key === schedule.day_of_week)?.label || 'Custom'} • Horário: {schedule.time_local || '-'}
-                        </p>
-                        <p><code>{schedule.cron_expr}</code> • {schedule.timezone}</p>
-                      </div>
-                      <button onClick={() => openEditSchedule(schedule)}>Editar</button>
-                    </li>
-                  ))}
-                </ul>
-              </article>
-
-              {editingSchedule && (
-                <article className="panel">
-                <h3>Editar agenda</h3>
-                <form onSubmit={updateSchedule} className="form">
-                  <input placeholder="Tema" value={editScheduleForm.topic} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, topic: e.target.value })} required />
-                  <select value={editScheduleForm.day_of_week} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, day_of_week: e.target.value })} required>
-                    {WEEK_DAYS.map((day) => <option key={day.key} value={day.key}>{day.label}</option>)}
-                  </select>
-                  <input type="time" value={editScheduleForm.time_local} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, time_local: e.target.value })} required />
-                  <input placeholder="Timezone" value={editScheduleForm.timezone} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, timezone: e.target.value })} required />
-                  <label className="check">
-                    <input type="checkbox" checked={editScheduleForm.is_active} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, is_active: e.target.checked })} />
-                      Agenda ativa
-                    </label>
-                    <div className="actions">
-                      <button type="submit">Salvar alterações</button>
-                      <button type="button" className="ghost" onClick={() => setEditingSchedule(null)}>Cancelar</button>
-                    </div>
-                  </form>
-                </article>
-              )}
-            </section>
-
             <section className="calendar-wrap">
               <div className="calendar-header">
                 <h3>Planner semanal de postagens</h3>
                 <div className="calendar-filters">
+                  <button type="button" className="ghost" onClick={() => setShowSchedulesList((prev) => !prev)}>
+                    {showSchedulesList ? 'Ocultar agendas' : `Ver agendas (${filteredSchedules.length})`}
+                  </button>
                   <label>
                     Conta:
                     <select value={agendaAccountFilter} onChange={(e) => setAgendaAccountFilter(e.target.value)}>
@@ -658,6 +603,82 @@ export default function App() {
                 </article>
               )}
             </section>
+
+            {showSchedulesList && (
+              <section className="panel-grid">
+                <article className="panel">
+                  <h3>Agendas cadastradas</h3>
+                  <ul className="agenda-list">
+                    {filteredSchedules.map((schedule) => (
+                      <li key={schedule.id}>
+                        <div>
+                          <strong>{schedule.topic}</strong>
+                          <p>{accountNameById[schedule.account_id] || `Conta #${schedule.account_id}`}</p>
+                          <p>
+                            Dia: {WEEK_DAYS.find((day) => day.key === schedule.day_of_week)?.label || 'Custom'} • Horário: {schedule.time_local || '-'}
+                          </p>
+                          <p><code>{schedule.cron_expr}</code> • {schedule.timezone}</p>
+                        </div>
+                        <button onClick={() => openEditSchedule(schedule)}>Editar</button>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              </section>
+            )}
+
+            {editingSchedule && (
+              <section className="panel-grid">
+                <article className="panel">
+                  <h3>Editar agenda</h3>
+                  <form onSubmit={updateSchedule} className="form">
+                    <input placeholder="Tema" value={editScheduleForm.topic} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, topic: e.target.value })} required />
+                    <select value={editScheduleForm.day_of_week} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, day_of_week: e.target.value })} required>
+                      {WEEK_DAYS.map((day) => <option key={day.key} value={day.key}>{day.label}</option>)}
+                    </select>
+                    <input type="time" value={editScheduleForm.time_local} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, time_local: e.target.value })} required />
+                    <input placeholder="Timezone" value={editScheduleForm.timezone} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, timezone: e.target.value })} required />
+                    <label className="check">
+                      <input type="checkbox" checked={editScheduleForm.is_active} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, is_active: e.target.checked })} />
+                      Agenda ativa
+                    </label>
+                    <div className="actions">
+                      <button type="submit">Salvar alterações</button>
+                      <button type="button" className="ghost" onClick={() => setEditingSchedule(null)}>Cancelar</button>
+                    </div>
+                  </form>
+                </article>
+              </section>
+            )}
+
+            {isCreateScheduleModalOpen && (
+              <div className="modal-overlay" onClick={() => setIsCreateScheduleModalOpen(false)}>
+                <article className="panel modal-card" onClick={(e) => e.stopPropagation()}>
+                  <h3>Nova agenda</h3>
+                  <p className="modal-subtitle">
+                    {WEEK_DAYS.find((day) => String(day.key) === scheduleForm.day_of_week)?.label} às {scheduleForm.time_local}
+                  </p>
+                  <form onSubmit={createSchedule} className="form">
+                    <select value={scheduleForm.account_id} onChange={(e) => setScheduleForm({ ...scheduleForm, account_id: e.target.value })} required>
+                      <option value="">Selecione a conta</option>
+                      {accounts.map((account) => (
+                        <option key={account.id} value={account.id}>{account.name}</option>
+                      ))}
+                    </select>
+                    <input placeholder="Tema" value={scheduleForm.topic} onChange={(e) => setScheduleForm({ ...scheduleForm, topic: e.target.value })} required />
+                    <select value={scheduleForm.day_of_week} onChange={(e) => setScheduleForm({ ...scheduleForm, day_of_week: e.target.value })} required>
+                      {WEEK_DAYS.map((day) => <option key={day.key} value={day.key}>{day.label}</option>)}
+                    </select>
+                    <input type="time" value={scheduleForm.time_local} onChange={(e) => setScheduleForm({ ...scheduleForm, time_local: e.target.value })} required />
+                    <input placeholder="Timezone" value={scheduleForm.timezone} onChange={(e) => setScheduleForm({ ...scheduleForm, timezone: e.target.value })} required />
+                    <div className="actions">
+                      <button type="submit">Salvar agenda</button>
+                      <button type="button" className="ghost" onClick={() => setIsCreateScheduleModalOpen(false)}>Cancelar</button>
+                    </div>
+                  </form>
+                </article>
+              </div>
+            )}
           </>
         )}
 

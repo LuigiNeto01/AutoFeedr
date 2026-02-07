@@ -452,6 +452,27 @@ th {
   background: linear-gradient(135deg, #2d5ded, #2141a4);
 }
 
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 8, 18, 0.76);
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 50;
+}
+
+.modal-card {
+  width: min(560px, 96vw);
+}
+
+.modal-subtitle {
+  margin: -4px 0 12px;
+  color: #9aadd7;
+  font-size: 13px;
+}
+
 @media (max-width: 980px) {
   .app-shell {
     grid-template-columns: 1fr;
