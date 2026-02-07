@@ -1,6 +1,17 @@
 import { useEffect, useState } from 'react'
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
+function resolveApiBase() {
+  const fromEnv = import.meta.env.VITE_API_BASE
+  if (fromEnv && fromEnv.trim()) {
+    return fromEnv.trim()
+  }
+
+  const protocol = window.location.protocol
+  const hostname = window.location.hostname
+  return `${protocol}//${hostname}:8000`
+}
+
+const API_BASE = resolveApiBase()
 
 async function api(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
