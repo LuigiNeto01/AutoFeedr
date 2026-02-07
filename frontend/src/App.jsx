@@ -64,6 +64,16 @@ function parseDayPart(part) {
 }
 
 function scheduleToCalendarEvents(schedule, accountNameById) {
+  if (schedule.day_of_week !== null && schedule.day_of_week !== undefined && schedule.time_local) {
+    return [{
+      complex: false,
+      day: schedule.day_of_week,
+      time: schedule.time_local,
+      label: `${schedule.topic} • ${accountNameById[schedule.account_id] || `Conta #${schedule.account_id}`}`,
+      schedule,
+    }]
+  }
+
   const parts = schedule.cron_expr.split(/\s+/)
   if (parts.length < 5) {
     return [{ complex: true, label: schedule.cron_expr, schedule }]
@@ -86,6 +96,22 @@ function scheduleToCalendarEvents(schedule, accountNameById) {
   }))
 }
 
+function inferScheduleFromCron(cronExpr) {
+  const parts = (cronExpr || '').split(/\s+/)
+  if (parts.length < 5) return { day_of_week: '', time_local: '' }
+  const [minutePart, hourPart, , , dayPart] = parts
+  const hour = Number(hourPart)
+  const minute = Number(minutePart)
+  const day = Number(dayPart)
+  if (Number.isNaN(hour) || Number.isNaN(minute) || Number.isNaN(day)) {
+    return { day_of_week: '', time_local: '' }
+  }
+  return {
+    day_of_week: String(day === 7 ? 0 : day),
+    time_local: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+  }
+}
+
 function StatCard({ title, value, subtitle }) {
   return (
     <article className="stat-card">
@@ -104,18 +130,37 @@ export default function App() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
-  const [accountForm, setAccountForm] = useState({ name: '', token: '', urn: '' })
+  const [accountForm, setAccountForm] = useState({
+    name: '',
+    token: '',
+    urn: '',
+    prompt_generation: '',
+    prompt_translation: '',
+  })
   const [editingAccount, setEditingAccount] = useState(null)
-  const [editAccountForm, setEditAccountForm] = useState({ urn: '', token: '', is_active: true })
+  const [editAccountForm, setEditAccountForm] = useState({
+    urn: '',
+    token: '',
+    is_active: true,
+    prompt_generation: '',
+    prompt_translation: '',
+  })
 
   const [scheduleForm, setScheduleForm] = useState({
     account_id: '',
     topic: '',
-    cron_expr: '0 9 * * 1-5',
+    day_of_week: '1',
+    time_local: '09:00',
     timezone: 'America/Sao_Paulo',
   })
   const [editingSchedule, setEditingSchedule] = useState(null)
-  const [editScheduleForm, setEditScheduleForm] = useState({ topic: '', cron_expr: '', timezone: '', is_active: true })
+  const [editScheduleForm, setEditScheduleForm] = useState({
+    topic: '',
+    day_of_week: '1',
+    time_local: '09:00',
+    timezone: '',
+    is_active: true,
+  })
 
   const [publishMode, setPublishMode] = useState('topic')
   const [jobForm, setJobForm] = useState({ account_id: '', topic: '', paper_url: '', paper_text: '' })
@@ -175,7 +220,13 @@ export default function App() {
     event.preventDefault()
     try {
       await api('/accounts', { method: 'POST', body: JSON.stringify(accountForm) })
-      setAccountForm({ name: '', token: '', urn: '' })
+      setAccountForm({
+        name: '',
+        token: '',
+        urn: '',
+        prompt_generation: '',
+        prompt_translation: '',
+      })
       await loadAll()
     } catch (e) {
       setError(`Erro ao criar conta: ${e.message}`)
@@ -184,7 +235,13 @@ export default function App() {
 
   function openEditAccount(account) {
     setEditingAccount(account)
-    setEditAccountForm({ urn: account.urn, token: '', is_active: account.is_active })
+    setEditAccountForm({
+      urn: account.urn,
+      token: '',
+      is_active: account.is_active,
+      prompt_generation: account.prompt_generation || '',
+      prompt_translation: account.prompt_translation || '',
+    })
   }
 
   async function updateAccount(event) {
@@ -194,6 +251,8 @@ export default function App() {
       const payload = {
         urn: editAccountForm.urn,
         is_active: editAccountForm.is_active,
+        prompt_generation: editAccountForm.prompt_generation,
+        prompt_translation: editAccountForm.prompt_translation,
       }
       if (editAccountForm.token.trim()) payload.token = editAccountForm.token.trim()
       await api(`/accounts/${editingAccount.id}`, { method: 'PUT', body: JSON.stringify(payload) })
@@ -209,9 +268,19 @@ export default function App() {
     try {
       await api('/schedules', {
         method: 'POST',
-        body: JSON.stringify({ ...scheduleForm, account_id: Number(scheduleForm.account_id) }),
+        body: JSON.stringify({
+          ...scheduleForm,
+          account_id: Number(scheduleForm.account_id),
+          day_of_week: Number(scheduleForm.day_of_week),
+        }),
       })
-      setScheduleForm({ account_id: '', topic: '', cron_expr: '0 9 * * 1-5', timezone: 'America/Sao_Paulo' })
+      setScheduleForm({
+        account_id: '',
+        topic: '',
+        day_of_week: '1',
+        time_local: '09:00',
+        timezone: 'America/Sao_Paulo',
+      })
       await loadAll()
     } catch (e) {
       setError(`Erro ao criar agenda: ${e.message}`)
@@ -219,10 +288,12 @@ export default function App() {
   }
 
   function openEditSchedule(schedule) {
+    const inferred = inferScheduleFromCron(schedule.cron_expr)
     setEditingSchedule(schedule)
     setEditScheduleForm({
       topic: schedule.topic,
-      cron_expr: schedule.cron_expr,
+      day_of_week: String(schedule.day_of_week ?? inferred.day_of_week ?? '1'),
+      time_local: schedule.time_local || inferred.time_local || '09:00',
       timezone: schedule.timezone,
       is_active: schedule.is_active,
     })
@@ -232,7 +303,13 @@ export default function App() {
     event.preventDefault()
     if (!editingSchedule) return
     try {
-      await api(`/schedules/${editingSchedule.id}`, { method: 'PUT', body: JSON.stringify(editScheduleForm) })
+      await api(`/schedules/${editingSchedule.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          ...editScheduleForm,
+          day_of_week: Number(editScheduleForm.day_of_week),
+        }),
+      })
       setEditingSchedule(null)
       await loadAll()
     } catch (e) {
@@ -329,6 +406,13 @@ export default function App() {
                 <input placeholder="Nome interno" value={accountForm.name} onChange={(e) => setAccountForm({ ...accountForm, name: e.target.value })} required />
                 <input placeholder="URN (ou sufixo)" value={accountForm.urn} onChange={(e) => setAccountForm({ ...accountForm, urn: e.target.value })} required />
                 <textarea placeholder="Token" value={accountForm.token} onChange={(e) => setAccountForm({ ...accountForm, token: e.target.value })} required />
+                <details>
+                  <summary>Prompts personalizados (opcional)</summary>
+                  <div className="form details-form">
+                    <textarea placeholder="Prompt de geração (usa {informacoes})" value={accountForm.prompt_generation} onChange={(e) => setAccountForm({ ...accountForm, prompt_generation: e.target.value })} />
+                    <textarea placeholder="Prompt de tradução (usa {post_portugues})" value={accountForm.prompt_translation} onChange={(e) => setAccountForm({ ...accountForm, prompt_translation: e.target.value })} />
+                  </div>
+                </details>
                 <button type="submit">Salvar conta</button>
               </form>
             </article>
@@ -341,6 +425,8 @@ export default function App() {
                     <div>
                       <strong>{account.name}</strong>
                       <p>ID: {account.id} • URN: {account.urn}</p>
+                      <p>Prompt geração: {account.prompt_generation ? 'customizado' : 'padrão'}</p>
+                      <p>Prompt tradução: {account.prompt_translation ? 'customizado' : 'padrão'}</p>
                     </div>
                     <button onClick={() => openEditAccount(account)}>Editar</button>
                   </li>
@@ -354,6 +440,13 @@ export default function App() {
                 <form onSubmit={updateAccount} className="form">
                   <input placeholder="URN" value={editAccountForm.urn} onChange={(e) => setEditAccountForm({ ...editAccountForm, urn: e.target.value })} required />
                   <textarea placeholder="Novo token (opcional)" value={editAccountForm.token} onChange={(e) => setEditAccountForm({ ...editAccountForm, token: e.target.value })} />
+                  <details open>
+                    <summary>Prompts da conta</summary>
+                    <div className="form details-form">
+                      <textarea placeholder="Prompt de geração (usa {informacoes})" value={editAccountForm.prompt_generation} onChange={(e) => setEditAccountForm({ ...editAccountForm, prompt_generation: e.target.value })} />
+                      <textarea placeholder="Prompt de tradução (usa {post_portugues})" value={editAccountForm.prompt_translation} onChange={(e) => setEditAccountForm({ ...editAccountForm, prompt_translation: e.target.value })} />
+                    </div>
+                  </details>
                   <label className="check">
                     <input type="checkbox" checked={editAccountForm.is_active} onChange={(e) => setEditAccountForm({ ...editAccountForm, is_active: e.target.checked })} />
                     Conta ativa
@@ -381,7 +474,10 @@ export default function App() {
                     ))}
                   </select>
                   <input placeholder="Tema" value={scheduleForm.topic} onChange={(e) => setScheduleForm({ ...scheduleForm, topic: e.target.value })} required />
-                  <input placeholder="Cron (ex: 0 9 * * 1-5)" value={scheduleForm.cron_expr} onChange={(e) => setScheduleForm({ ...scheduleForm, cron_expr: e.target.value })} required />
+                  <select value={scheduleForm.day_of_week} onChange={(e) => setScheduleForm({ ...scheduleForm, day_of_week: e.target.value })} required>
+                    {WEEK_DAYS.map((day) => <option key={day.key} value={day.key}>{day.label}</option>)}
+                  </select>
+                  <input type="time" value={scheduleForm.time_local} onChange={(e) => setScheduleForm({ ...scheduleForm, time_local: e.target.value })} required />
                   <input placeholder="Timezone" value={scheduleForm.timezone} onChange={(e) => setScheduleForm({ ...scheduleForm, timezone: e.target.value })} required />
                   <button type="submit">Salvar agenda</button>
                 </form>
@@ -395,6 +491,9 @@ export default function App() {
                       <div>
                         <strong>{schedule.topic}</strong>
                         <p>{accountNameById[schedule.account_id] || `Conta #${schedule.account_id}`}</p>
+                        <p>
+                          Dia: {WEEK_DAYS.find((day) => day.key === schedule.day_of_week)?.label || 'Custom'} • Horário: {schedule.time_local || '-'}
+                        </p>
                         <p><code>{schedule.cron_expr}</code> • {schedule.timezone}</p>
                       </div>
                       <button onClick={() => openEditSchedule(schedule)}>Editar</button>
@@ -405,13 +504,16 @@ export default function App() {
 
               {editingSchedule && (
                 <article className="panel">
-                  <h3>Editar agenda</h3>
-                  <form onSubmit={updateSchedule} className="form">
-                    <input placeholder="Tema" value={editScheduleForm.topic} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, topic: e.target.value })} required />
-                    <input placeholder="Cron" value={editScheduleForm.cron_expr} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, cron_expr: e.target.value })} required />
-                    <input placeholder="Timezone" value={editScheduleForm.timezone} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, timezone: e.target.value })} required />
-                    <label className="check">
-                      <input type="checkbox" checked={editScheduleForm.is_active} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, is_active: e.target.checked })} />
+                <h3>Editar agenda</h3>
+                <form onSubmit={updateSchedule} className="form">
+                  <input placeholder="Tema" value={editScheduleForm.topic} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, topic: e.target.value })} required />
+                  <select value={editScheduleForm.day_of_week} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, day_of_week: e.target.value })} required>
+                    {WEEK_DAYS.map((day) => <option key={day.key} value={day.key}>{day.label}</option>)}
+                  </select>
+                  <input type="time" value={editScheduleForm.time_local} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, time_local: e.target.value })} required />
+                  <input placeholder="Timezone" value={editScheduleForm.timezone} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, timezone: e.target.value })} required />
+                  <label className="check">
+                    <input type="checkbox" checked={editScheduleForm.is_active} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, is_active: e.target.checked })} />
                       Agenda ativa
                     </label>
                     <div className="actions">
@@ -428,12 +530,24 @@ export default function App() {
               <div className="calendar-grid">
                 {WEEK_DAYS.map((day) => (
                   <article key={day.key} className="calendar-day">
-                    <header>{day.label}</header>
+                    <header>
+                      <span>{day.label}</span>
+                      <button
+                        type="button"
+                        className="tiny-btn"
+                        onClick={() => setScheduleForm({ ...scheduleForm, day_of_week: String(day.key) })}
+                      >
+                        usar
+                      </button>
+                    </header>
                     <div className="calendar-items">
                       {calendarData.byDay[day.key]?.length ? calendarData.byDay[day.key].map((event, index) => (
                         <div key={`${event.schedule.id}-${index}`} className="calendar-item">
                           <p className="time">{event.time}</p>
                           <p>{event.label}</p>
+                          <button type="button" className="tiny-btn" onClick={() => openEditSchedule(event.schedule)}>
+                            editar
+                          </button>
                         </div>
                       )) : <p className="empty">Sem postagens</p>}
                     </div>

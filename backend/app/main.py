@@ -3,8 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import router
 from app.core.settings import settings
-from app.db.base import Base
-from app.db.session import engine
+from app.db.bootstrap import ensure_schema
 
 
 app = FastAPI(title=settings.app_name)
@@ -21,7 +20,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 def startup_create_tables() -> None:
-    Base.metadata.create_all(bind=engine)
+    ensure_schema()
 
 
 app.include_router(router)

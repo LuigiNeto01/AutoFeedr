@@ -134,7 +134,11 @@ def _process_job(db: Session, job: Job) -> None:
 
     token = decrypt_text(fernet, account.token_encrypted)
     content_input = _build_content_input(job)
-    post_text = gerar_post(content_input)
+    post_text = gerar_post(
+        content_input,
+        prompt_generation=account.prompt_generation,
+        prompt_translation=account.prompt_translation,
+    )
     if not post_text:
         raise RuntimeError("Falha ao gerar post com Gemini.")
 

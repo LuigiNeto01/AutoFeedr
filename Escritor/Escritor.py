@@ -30,13 +30,18 @@ def _montar_post_bilingue(post_pt_br: str, post_en_us: str) -> str:
     post = f"{header_pt}{pt_fit}{header_en}{en_fit}"
     return _fit_text_limit(post, MAX_LINKEDIN_POST_CHARS)
 
-def gerar_post(informacoes: str) -> Optional[str]:
+def gerar_post(
+    informacoes: str,
+    prompt_generation: str | None = None,
+    prompt_translation: str | None = None,
+) -> Optional[str]:
 
     print("Conectando ao Gemini...")
     modelo = conectar_gemini()
 
     # Gera o post em portugues a partir do prompt base.
-    prompt_pt_br = PROMPT_GERACAO_POST.format(informacoes=informacoes)
+    prompt_template_pt = prompt_generation or PROMPT_GERACAO_POST
+    prompt_pt_br = prompt_template_pt.format(informacoes=informacoes)
     post_pt_br = gerar_resposta(modelo, prompt_pt_br)
     if not post_pt_br:
         print("Falha ao gerar post em PT-BR. Abortando.")
@@ -45,7 +50,8 @@ def gerar_post(informacoes: str) -> Optional[str]:
     print("Post em PT-BR gerado.")
 
     # Traduz o post para ingles (US) mantendo o estilo.
-    prompt_traducao = PROMPT_TRADUCAO.format(post_portugues=post_pt_br)
+    prompt_template_translation = prompt_translation or PROMPT_TRADUCAO
+    prompt_traducao = prompt_template_translation.format(post_portugues=post_pt_br)
     post_en_us = gerar_resposta(modelo, prompt_traducao)
     if not post_en_us:
         print("Falha ao gerar post em EN-US. Abortando.")

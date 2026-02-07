@@ -8,12 +8,16 @@ class AccountCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     token: str = Field(min_length=10)
     urn: str = Field(min_length=3, max_length=255)
+    prompt_generation: str | None = None
+    prompt_translation: str | None = None
     is_active: bool = True
 
 
 class AccountUpdate(BaseModel):
     token: str | None = None
     urn: str | None = None
+    prompt_generation: str | None = None
+    prompt_translation: str | None = None
     is_active: bool | None = None
 
 
@@ -21,6 +25,8 @@ class AccountOut(BaseModel):
     id: int
     name: str
     urn: str
+    prompt_generation: str | None = None
+    prompt_translation: str | None = None
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -32,7 +38,9 @@ class AccountOut(BaseModel):
 class ScheduleCreate(BaseModel):
     account_id: int
     topic: str = Field(min_length=2, max_length=255)
-    cron_expr: str = Field(min_length=9, max_length=120)
+    cron_expr: str | None = Field(default=None, min_length=9, max_length=120)
+    day_of_week: int | None = Field(default=None, ge=0, le=6)
+    time_local: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
     timezone: str = "America/Sao_Paulo"
     is_active: bool = True
 
@@ -40,6 +48,8 @@ class ScheduleCreate(BaseModel):
 class ScheduleUpdate(BaseModel):
     topic: str | None = None
     cron_expr: str | None = None
+    day_of_week: int | None = Field(default=None, ge=0, le=6)
+    time_local: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
     timezone: str | None = None
     is_active: bool | None = None
 
@@ -49,6 +59,8 @@ class ScheduleOut(BaseModel):
     account_id: int
     topic: str
     cron_expr: str
+    day_of_week: int | None = None
+    time_local: str | None = None
     timezone: str
     is_active: bool
     created_at: datetime

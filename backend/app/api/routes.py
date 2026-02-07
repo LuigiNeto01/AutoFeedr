@@ -24,6 +24,15 @@ from app.schemas.schemas import (
 router = APIRouter()
 
 
+def _build_simple_weekly_cron(day_of_week: int, time_local: str) -> str:
+    hour_raw, minute_raw = time_local.split(":")
+    hour = int(hour_raw)
+    minute = int(minute_raw)
+    if hour < 0 or hour > 23 or minute < 0 or minute > 59:
+        raise ValueError("Horario invalido. Use HH:MM entre 00:00 e 23:59.")
+    return f"{minute} {hour} * * {day_of_week}"
+
+
 @router.get("/health")
 def healthcheck():
     return {"status": "ok", "service": "autofeedr-api"}
@@ -45,6 +54,8 @@ def create_account(payload: AccountCreate, db: Session = Depends(get_db)):
         name=payload.name,
         token_encrypted=encrypt_text(fernet, payload.token),
         urn=payload.urn,
+        prompt_generation=payload.prompt_generation,
+        prompt_translation=payload.prompt_translation,
         is_active=payload.is_active,
     )
     db.add(account)
@@ -64,6 +75,10 @@ def update_account(account_id: int, payload: AccountUpdate, db: Session = Depend
         account.token_encrypted = encrypt_text(fernet, payload.token)
     if payload.urn is not None:
         account.urn = payload.urn
+    if payload.prompt_generation is not None:
+        account.prompt_generation = payload.prompt_generation
+    if payload.prompt_translation is not None:
+        account.prompt_translation = payload.prompt_translation
     if payload.is_active is not None:
         account.is_active = payload.is_active
 
@@ -83,10 +98,23 @@ def create_schedule(payload: ScheduleCreate, db: Session = Depends(get_db)):
     if not account:
         raise HTTPException(status_code=404, detail="Conta nao encontrada.")
 
+    cron_expr = payload.cron_expr
+    day_of_week = payload.day_of_week
+    time_local = payload.time_local
+    if not cron_expr:
+        if day_of_week is None or not time_local:
+            raise HTTPException(status_code=422, detail="Informe cron_expr ou (day_of_week + time_local).")
+        try:
+            cron_expr = _build_simple_weekly_cron(day_of_week, time_local)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
     schedule = Schedule(
         account_id=payload.account_id,
         topic=payload.topic,
-        cron_expr=payload.cron_expr,
+        cron_expr=cron_expr,
+        day_of_week=day_of_week,
+        time_local=time_local,
         timezone=payload.timezone,
         is_active=payload.is_active,
     )
@@ -106,6 +134,15 @@ def update_schedule(schedule_id: int, payload: ScheduleUpdate, db: Session = Dep
         schedule.topic = payload.topic
     if payload.cron_expr is not None:
         schedule.cron_expr = payload.cron_expr
+        schedule.day_of_week = None
+        schedule.time_local = None
+    elif payload.day_of_week is not None and payload.time_local:
+        try:
+            schedule.cron_expr = _build_simple_weekly_cron(payload.day_of_week, payload.time_local)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        schedule.day_of_week = payload.day_of_week
+        schedule.time_local = payload.time_local
     if payload.timezone is not None:
         schedule.timezone = payload.timezone
     if payload.is_active is not None:
