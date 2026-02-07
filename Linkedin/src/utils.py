@@ -32,7 +32,9 @@ def json_data(novos_dados, nome_arquivo="dados.json"):
             json.dump(dados, f, ensure_ascii=False, indent=4)
         print("Arquivo JSON atualizado com sucesso.")
         
-    except Exception as e:pass  
+    except Exception as e:
+        print(f"Falha ao atualizar JSON '{nome_arquivo}': {e}")
+        raise
 
 def ler_json(nome_arquivo="dados.json"):
     """Lê o arquivo JSON e retorna os dados. Se não existir, retorna um dicionário vazio."""

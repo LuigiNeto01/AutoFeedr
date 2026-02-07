@@ -1,5 +1,4 @@
-import google.generativeai as genai
-from Escritor.src.utils import conectar_gemini, gerar_resposta
+from Escritor.src.utils import conectar_gemini, gerar_resposta, listar_modelos
 
 
 def main() -> None:
@@ -10,9 +9,8 @@ def main() -> None:
     if not resposta:
         print("Falha ao obter resposta do Gemini.")
         print("Modelos disponiveis com generateContent:")
-        for model in genai.list_models():
-            if "generateContent" in model.supported_generation_methods:
-                print(f"- {model.name}")
+        for model_name in listar_modelos():
+            print(f"- {model_name}")
         return
     print("Resposta do Gemini:")
     print(resposta)

@@ -6,7 +6,7 @@ Sua tarefa eh criar um post envolvente, conciso e com autoridade tecnica com bas
 
 Siga estas diretrizes obrigatorias ao criar o post:
 
-1. O post deve ter no maximo **1200 caracteres**.
+1. O post deve ter no maximo **1400 caracteres**.
 2. O tom deve ser **profissional, analitico e equilibrado**, evitando linguagem exageradamente promocional.
 3. Deixe CLARO que o autor do post esta **comentando ou analisando um estudo, pesquisa ou iniciativa**, e nao que participou diretamente do projeto.
 4. Sempre que falar de IA, LLMs ou automacao em areas sensiveis (ex: saude, direito, financas), inclua uma breve nocao de **uso como apoio, com supervisao humana ou validacao especializada**.
@@ -34,7 +34,7 @@ Sua tarefa eh traduzir o post para o ingles, preservando:
 - A ideia de que o autor esta analisando um estudo, e nao reivindicando autoria
 
 Diretrizes:
-1. O texto traduzido deve ter no maximo 1200 caracteres.
+1. O texto traduzido deve ter no maximo 1400 caracteres.
 2. Mantenha linguagem profissional e fluida, adequada ao Linkedin internacional.
 3. Nao adicione nem remova informacoes relevantes.
 4. Escreva apenas o texto traduzido, sem saudacoes ou despedidas.

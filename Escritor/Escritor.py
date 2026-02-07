@@ -2,6 +2,34 @@ from typing import Optional
 from .src.prompt import PROMPT_GERACAO_POST, PROMPT_TRADUCAO
 from .src.utils import conectar_gemini, gerar_resposta
 
+MAX_SECTION_CHARS = 1400
+MAX_LINKEDIN_POST_CHARS = 3000
+
+def _fit_text_limit(text: str, limit: int) -> str:
+    """Garante limite por caracteres sem retornar string vazia."""
+    clean = (text or "").strip()
+    if len(clean) <= limit:
+        return clean
+    if limit <= 3:
+        return clean[:limit]
+    clipped = clean[:limit - 3].rstrip()
+    return f"{clipped}..."
+
+def _montar_post_bilingue(post_pt_br: str, post_en_us: str) -> str:
+    header_pt = "「PT-BR」\n"
+    header_en = "\n\n「EN-US」\n"
+    base = f"{header_pt}{post_pt_br}{header_en}{post_en_us}"
+    if len(base) <= MAX_LINKEDIN_POST_CHARS:
+        return base
+
+    # Reserva espaco para cabecalhos e comprime blocos de forma equilibrada.
+    available = MAX_LINKEDIN_POST_CHARS - len(header_pt) - len(header_en)
+    per_section = max(200, available // 2)
+    pt_fit = _fit_text_limit(post_pt_br, per_section)
+    en_fit = _fit_text_limit(post_en_us, per_section)
+    post = f"{header_pt}{pt_fit}{header_en}{en_fit}"
+    return _fit_text_limit(post, MAX_LINKEDIN_POST_CHARS)
+
 def gerar_post(informacoes: str) -> Optional[str]:
 
     print("Conectando ao Gemini...")
@@ -13,6 +41,7 @@ def gerar_post(informacoes: str) -> Optional[str]:
     if not post_pt_br:
         print("Falha ao gerar post em PT-BR. Abortando.")
         return None
+    post_pt_br = _fit_text_limit(post_pt_br, MAX_SECTION_CHARS)
     print("Post em PT-BR gerado.")
 
     # Traduz o post para ingles (US) mantendo o estilo.
@@ -21,9 +50,13 @@ def gerar_post(informacoes: str) -> Optional[str]:
     if not post_en_us:
         print("Falha ao gerar post em EN-US. Abortando.")
         return None
+    post_en_us = _fit_text_limit(post_en_us, MAX_SECTION_CHARS)
     print("Post em EN-US gerado.")
 
-    post =  f"""「PT-BR」\n{post_pt_br}\n\n「EN-US」\n{post_en_us}"""
+    post = _montar_post_bilingue(post_pt_br, post_en_us)
+    if len(post) > MAX_LINKEDIN_POST_CHARS:
+        print("Post excedeu limite do LinkedIn apos ajustes. Abortando.")
+        return None
 
-    print("Post final montado.")
+    print(f"Post final montado ({len(post)} caracteres).")
     return post
