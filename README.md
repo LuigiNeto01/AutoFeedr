@@ -1,39 +1,51 @@
 # AutoFeedr
 
-Automatiza a busca de artigos no arXiv, gera texto com o Gemini e publica no LinkedIn em horarios definidos.
+Plataforma para automacao de conteudo tecnico no LinkedIn com:
 
-## Requisitos
-- Python 3.10+
-- Conta e credenciais do LinkedIn
-- Chave da API do Gemini
+1. API (`backend`) para contas, agendas e jobs manuais.
+2. Worker (`worker`) para scheduler, fila e publicacao.
+3. Frontend (`frontend`) para administracao no navegador.
+4. Postgres para persistencia.
 
-## Instalacao
+## Stack
+- Backend: FastAPI + SQLAlchemy
+- Worker: Python (croniter + retry)
+- Frontend: React + Vite
+- Banco: Postgres
+
+## Subir com Docker
 ```bash
-pip install -r requirements.txt
+docker compose up -d --build
 ```
 
-Crie o arquivo `.env` com base no exemplo:
+Servicos:
+- API: `http://localhost:8000`
+- Frontend: `http://localhost:5173`
+- Swagger: `http://localhost:8000/docs`
+
+## Configuracao
+Crie `.env` a partir de `.env.example` e configure:
+
 ```bash
-copy .env.example .env
+cp .env.example .env
 ```
 
-## Variaveis de ambiente
+Campos importantes:
 - `GEMINI_API_KEY`
-- `client_id`
-- `client_secret`
-- `redirect_uri`
+- `TOKEN_ENCRYPTION_KEY` (Fernet, usado para criptografar tokens LinkedIn no banco)
+- `DATABASE_URL`
+- `CORS_ORIGINS`
+- `DEFAULT_TIMEZONE`
 
-## Configuracao de agenda
-Edite `post_scheduler/settings.json` para definir usuarios, dias e horarios.
+## Fluxo resumido
+1. Cadastrar contas LinkedIn na API/UI.
+2. Criar agendas por conta com `cron_expr` + timezone.
+3. Worker enfileira jobs de agenda e processa jobs manuais.
+4. Job gera post (tema/link/texto) e publica no LinkedIn.
+5. Em falha, retry automatico ate 3 tentativas.
 
-## Execucao
-```bash
-python main.py
-```
-
-## Estrutura
-- `arxiv_reciver/`: busca e serializacao de artigos do arXiv
-- `Escritor/`: prompts e geracao de texto com Gemini
-- `Linkedin/`: autenticacao e postagem no LinkedIn
-- `post_scheduler/`: agenda de execucao
-- `data/`: arquivos temporarios gerados
+## Estrutura principal
+- `backend/`: API e modelos do banco.
+- `worker/`: scheduler e processamento de jobs.
+- `frontend/`: painel administrativo.
+- `Escritor/`, `Linkedin/`, `arxiv_reciver/`: modulos reaproveitados do fluxo legado.

@@ -2,3 +2,10 @@ arxiv
 google-genai
 python-dotenv
 requests
+fastapi
+uvicorn
+sqlalchemy
+psycopg[binary]
+pydantic-settings
+cryptography
+croniter

@@ -1,0 +1,75 @@
+:root {
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  background: linear-gradient(120deg, #f5f7fa, #e3ecff);
+  color: #1f2937;
+}
+
+body {
+  margin: 0;
+}
+
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  background: #ffffffd8;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 6px 20px rgba(10, 30, 70, 0.08);
+}
+
+.form {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+input, textarea, button {
+  font: inherit;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #c6d0df;
+}
+
+button {
+  border: none;
+  background: #1e40af;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1d4ed8;
+}
+
+.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+th, td {
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  padding: 8px;
+  font-size: 14px;
+}
