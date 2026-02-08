@@ -44,6 +44,10 @@ Campos importantes:
 4. Job gera post (tema/link/texto) e publica no LinkedIn.
 5. Em falha, retry automatico ate 3 tentativas.
 
+## Documentacao
+1. Referencia operacional do projeto: `agent.md`
+2. Documentacao completa da API: `docs/API_USAGE.md`
+
 ## Estrutura principal
 - `backend/`: API e modelos do banco.
 - `worker/`: scheduler e processamento de jobs.
