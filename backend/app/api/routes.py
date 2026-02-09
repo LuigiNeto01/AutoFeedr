@@ -124,6 +124,12 @@ def create_schedule(payload: ScheduleCreate, db: Session = Depends(get_db)):
         cron_expr=cron_expr,
         day_of_week=day_of_week,
         time_local=time_local,
+        source_mode=payload.source_mode,
+        objective=payload.objective,
+        audience=payload.audience,
+        cta_type=payload.cta_type,
+        campaign_theme=payload.campaign_theme,
+        use_date_context=payload.use_date_context,
         timezone=payload.timezone,
         is_active=payload.is_active,
     )
@@ -154,6 +160,18 @@ def update_schedule(schedule_id: int, payload: ScheduleUpdate, db: Session = Dep
         schedule.time_local = payload.time_local
     if payload.timezone is not None:
         schedule.timezone = payload.timezone
+    if payload.source_mode is not None:
+        schedule.source_mode = payload.source_mode
+    if payload.objective is not None:
+        schedule.objective = payload.objective
+    if payload.audience is not None:
+        schedule.audience = payload.audience
+    if payload.cta_type is not None:
+        schedule.cta_type = payload.cta_type
+    if payload.campaign_theme is not None:
+        schedule.campaign_theme = payload.campaign_theme
+    if payload.use_date_context is not None:
+        schedule.use_date_context = payload.use_date_context
     if payload.is_active is not None:
         schedule.is_active = payload.is_active
 

@@ -22,5 +22,13 @@ def ensure_schema() -> None:
 
     _add_column_if_missing("linkedin_accounts", "prompt_generation TEXT", "prompt_generation")
     _add_column_if_missing("linkedin_accounts", "prompt_translation TEXT", "prompt_translation")
+
     _add_column_if_missing("schedules", "day_of_week INTEGER", "day_of_week")
     _add_column_if_missing("schedules", "time_local VARCHAR(5)", "time_local")
+
+    _add_column_if_missing("schedules", "source_mode VARCHAR(32) DEFAULT 'arxiv'", "source_mode")
+    _add_column_if_missing("schedules", "objective VARCHAR(64)", "objective")
+    _add_column_if_missing("schedules", "audience VARCHAR(120)", "audience")
+    _add_column_if_missing("schedules", "cta_type VARCHAR(32)", "cta_type")
+    _add_column_if_missing("schedules", "campaign_theme VARCHAR(255)", "campaign_theme")
+    _add_column_if_missing("schedules", "use_date_context BOOLEAN DEFAULT TRUE", "use_date_context")

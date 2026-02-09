@@ -29,6 +29,9 @@ const WEEK_DAYS = [
   { key: 0, label: 'Domingo' },
 ]
 const TIME_SLOTS = Array.from({ length: 16 }, (_, idx) => `${String(idx + 7).padStart(2, '0')}:00`)
+const OBJECTIVE_OPTIONS = ['educacional', 'mini_case', 'prova_social', 'conversao', 'opiniao', 'bastidores']
+const SOURCE_MODE_OPTIONS = ['arxiv', 'prompt_only']
+const CTA_OPTIONS = ['comentario', 'dm', 'link', 'sem_cta']
 
 async function api(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -177,6 +180,12 @@ export default function App() {
     day_of_week: '1',
     time_local: '09:00',
     timezone: 'America/Sao_Paulo',
+    source_mode: 'arxiv',
+    objective: 'educacional',
+    audience: '',
+    cta_type: 'comentario',
+    campaign_theme: '',
+    use_date_context: true,
   })
   const [editingSchedule, setEditingSchedule] = useState(null)
   const [editScheduleForm, setEditScheduleForm] = useState({
@@ -184,6 +193,12 @@ export default function App() {
     day_of_week: '1',
     time_local: '09:00',
     timezone: '',
+    source_mode: 'arxiv',
+    objective: 'educacional',
+    audience: '',
+    cta_type: 'comentario',
+    campaign_theme: '',
+    use_date_context: true,
     is_active: true,
   })
   const [agendaAccountFilter, setAgendaAccountFilter] = useState('all')
@@ -364,12 +379,15 @@ export default function App() {
   async function createSchedule(event) {
     event.preventDefault()
     try {
+      const topic = scheduleForm.topic.trim() || scheduleForm.objective
       await api('/schedules', {
         method: 'POST',
         body: JSON.stringify({
           ...scheduleForm,
+          topic,
           account_id: Number(scheduleForm.account_id),
           day_of_week: Number(scheduleForm.day_of_week),
+          use_date_context: Boolean(scheduleForm.use_date_context),
         }),
       })
       setScheduleForm({
@@ -378,6 +396,12 @@ export default function App() {
         day_of_week: '1',
         time_local: '09:00',
         timezone: 'America/Sao_Paulo',
+        source_mode: 'arxiv',
+        objective: 'educacional',
+        audience: '',
+        cta_type: 'comentario',
+        campaign_theme: '',
+        use_date_context: true,
       })
       setIsCreateScheduleModalOpen(false)
       await loadAll()
@@ -394,6 +418,12 @@ export default function App() {
       day_of_week: String(schedule.day_of_week ?? inferred.day_of_week ?? '1'),
       time_local: schedule.time_local || inferred.time_local || '09:00',
       timezone: schedule.timezone,
+      source_mode: schedule.source_mode || 'arxiv',
+      objective: schedule.objective || 'educacional',
+      audience: schedule.audience || '',
+      cta_type: schedule.cta_type || 'comentario',
+      campaign_theme: schedule.campaign_theme || '',
+      use_date_context: schedule.use_date_context !== false,
       is_active: schedule.is_active,
     })
   }
@@ -406,7 +436,9 @@ export default function App() {
         method: 'PUT',
         body: JSON.stringify({
           ...editScheduleForm,
+          topic: editScheduleForm.topic.trim() || editScheduleForm.objective,
           day_of_week: Number(editScheduleForm.day_of_week),
+          use_date_context: Boolean(editScheduleForm.use_date_context),
         }),
       })
       setEditingSchedule(null)
@@ -758,6 +790,7 @@ export default function App() {
                             Dia: {WEEK_DAYS.find((day) => day.key === schedule.day_of_week)?.label || 'Custom'} • Horário: {schedule.time_local || '-'}
                           </p>
                           <p><code>{schedule.cron_expr}</code> • {schedule.timezone}</p>
+                          <p>Modo: {schedule.source_mode || 'arxiv'} • Objetivo: {schedule.objective || 'educacional'} • CTA: {schedule.cta_type || 'comentario'}</p>
                         </div>
                         <button onClick={() => openEditSchedule(schedule)}>Editar</button>
                       </li>
@@ -772,7 +805,22 @@ export default function App() {
                 <article className="panel">
                   <h3>Editar agenda</h3>
                   <form onSubmit={updateSchedule} className="form">
-                    <input placeholder="Tema" value={editScheduleForm.topic} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, topic: e.target.value })} required />
+                    <input placeholder="Tema central (opcional)" value={editScheduleForm.topic} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, topic: e.target.value })} />
+                    <select value={editScheduleForm.objective} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, objective: e.target.value })} required>
+                      {OBJECTIVE_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                    <input placeholder="Publico alvo" value={editScheduleForm.audience} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, audience: e.target.value })} />
+                    <input placeholder="Tema de campanha" value={editScheduleForm.campaign_theme} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, campaign_theme: e.target.value })} />
+                    <select value={editScheduleForm.source_mode} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, source_mode: e.target.value })} required>
+                      {SOURCE_MODE_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                    <select value={editScheduleForm.cta_type} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, cta_type: e.target.value })} required>
+                      {CTA_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                    <label className="check">
+                      <input type="checkbox" checked={editScheduleForm.use_date_context} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, use_date_context: e.target.checked })} />
+                      Usar contexto de data/feriados
+                    </label>
                     <select value={editScheduleForm.day_of_week} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, day_of_week: e.target.value })} required>
                       {WEEK_DAYS.map((day) => <option key={day.key} value={day.key}>{day.label}</option>)}
                     </select>
@@ -805,7 +853,22 @@ export default function App() {
                         <option key={account.id} value={account.id}>{account.name}</option>
                       ))}
                     </select>
-                    <input placeholder="Tema" value={scheduleForm.topic} onChange={(e) => setScheduleForm({ ...scheduleForm, topic: e.target.value })} required />
+                    <input placeholder="Tema central (opcional)" value={scheduleForm.topic} onChange={(e) => setScheduleForm({ ...scheduleForm, topic: e.target.value })} />
+                    <select value={scheduleForm.objective} onChange={(e) => setScheduleForm({ ...scheduleForm, objective: e.target.value })} required>
+                      {OBJECTIVE_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                    <input placeholder="Publico alvo (ex: advogados, devs, medicos)" value={scheduleForm.audience} onChange={(e) => setScheduleForm({ ...scheduleForm, audience: e.target.value })} />
+                    <input placeholder="Tema de campanha (ex: automacao para escritorio)" value={scheduleForm.campaign_theme} onChange={(e) => setScheduleForm({ ...scheduleForm, campaign_theme: e.target.value })} />
+                    <select value={scheduleForm.source_mode} onChange={(e) => setScheduleForm({ ...scheduleForm, source_mode: e.target.value })} required>
+                      {SOURCE_MODE_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                    <select value={scheduleForm.cta_type} onChange={(e) => setScheduleForm({ ...scheduleForm, cta_type: e.target.value })} required>
+                      {CTA_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                    <label className="check">
+                      <input type="checkbox" checked={scheduleForm.use_date_context} onChange={(e) => setScheduleForm({ ...scheduleForm, use_date_context: e.target.checked })} />
+                      Usar contexto de data/feriados
+                    </label>
                     <select value={scheduleForm.day_of_week} onChange={(e) => setScheduleForm({ ...scheduleForm, day_of_week: e.target.value })} required>
                       {WEEK_DAYS.map((day) => <option key={day.key} value={day.key}>{day.label}</option>)}
                     </select>

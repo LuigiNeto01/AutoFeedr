@@ -41,6 +41,12 @@ class ScheduleCreate(BaseModel):
     cron_expr: str | None = Field(default=None, min_length=9, max_length=120)
     day_of_week: int | None = Field(default=None, ge=0, le=6)
     time_local: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
+    source_mode: str = "arxiv"
+    objective: str | None = Field(default=None, max_length=64)
+    audience: str | None = Field(default=None, max_length=120)
+    cta_type: str | None = Field(default=None, max_length=32)
+    campaign_theme: str | None = Field(default=None, max_length=255)
+    use_date_context: bool = True
     timezone: str = "America/Sao_Paulo"
     is_active: bool = True
 
@@ -51,6 +57,12 @@ class ScheduleUpdate(BaseModel):
     day_of_week: int | None = Field(default=None, ge=0, le=6)
     time_local: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
     timezone: str | None = None
+    source_mode: str | None = None
+    objective: str | None = None
+    audience: str | None = None
+    cta_type: str | None = None
+    campaign_theme: str | None = None
+    use_date_context: bool | None = None
     is_active: bool | None = None
 
 
@@ -61,6 +73,12 @@ class ScheduleOut(BaseModel):
     cron_expr: str
     day_of_week: int | None = None
     time_local: str | None = None
+    source_mode: str | None = None
+    objective: str | None = None
+    audience: str | None = None
+    cta_type: str | None = None
+    campaign_theme: str | None = None
+    use_date_context: bool | None = None
     timezone: str
     is_active: bool
     created_at: datetime

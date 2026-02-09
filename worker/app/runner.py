@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import arxiv
@@ -36,6 +36,74 @@ def _should_run_schedule(cron_expr: str, local_now: datetime) -> bool:
     return croniter.match(cron_expr, local_now)
 
 
+def _easter_sunday(year: int) -> date:
+    a = year % 19
+    b = year // 100
+    c = year % 100
+    d = b // 4
+    e = b % 4
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i = c // 4
+    k = c % 4
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l) // 451
+    month = (h + l - 7 * m + 114) // 31
+    day = ((h + l - 7 * m + 114) % 31) + 1
+    return date(year, month, day)
+
+
+def _seasonal_context(local_now: datetime) -> str:
+    current_date = local_now.date()
+    year = current_date.year
+    easter = _easter_sunday(year)
+    carnaval = easter - timedelta(days=47)
+
+    if abs((current_date - carnaval).days) <= 3:
+        return "Carnaval: conecte com planejamento, foco e produtividade profissional no periodo."
+    if abs((current_date - easter).days) <= 3:
+        return "Pascoa: conecte com renovacao, estrategia e crescimento profissional."
+    if current_date.month == 5 and current_date.day == 1:
+        return "Dia do Trabalhador: valorize carreira, eficiencia e impacto do trabalho."
+    if current_date.month == 12 and current_date.day in range(20, 32):
+        return "Natal e fim de ano: conecte com retrospectiva, metas e planejamento do proximo ciclo."
+
+    return "Sem data comemorativa forte hoje: mantenha foco em valor pratico para o publico profissional."
+
+
+def _build_prompt_only_input(schedule: Schedule, local_now: datetime) -> str:
+    objective = schedule.objective or "educacional"
+    audience = schedule.audience or "profissionais da area"
+    cta_type = schedule.cta_type or "comentario"
+    campaign_theme = schedule.campaign_theme or schedule.topic
+
+    parts = [
+        "Modo: postagem editorial sem busca externa.",
+        f"Data atual: {local_now.strftime('%Y-%m-%d')}",
+        f"Tema central: {schedule.topic}",
+        f"Tema de campanha: {campaign_theme}",
+        f"Publico alvo: {audience}",
+        f"Objetivo editorial: {objective}",
+        f"CTA desejada: {cta_type}",
+    ]
+
+    if schedule.use_date_context:
+        parts.append(f"Contexto sazonal/profissional: {_seasonal_context(local_now)}")
+
+    parts.extend(
+        [
+            "Instrucoes de escrita:",
+            "- Escreva em tom profissional e claro.",
+            "- Traga valor pratico e aplicavel.",
+            "- Evite generalidades vagas.",
+            "- Nao repita texto identico de posts anteriores.",
+        ]
+    )
+
+    return "\n".join(parts)
+
+
 def _enqueue_due_schedules(db: Session) -> int:
     now_utc = datetime.now(UTC)
     created = 0
@@ -56,12 +124,16 @@ def _enqueue_due_schedules(db: Session) -> int:
             db.rollback()
             continue
 
+        mode = schedule.source_mode or "arxiv"
         db.add(
             Job(
                 account_id=schedule.account_id,
-                source="schedule",
+                source=f"schedule:{mode}",
                 status="pending",
                 topic=schedule.topic,
+                paper_text=_build_prompt_only_input(schedule, local_minute)
+                if mode == "prompt_only"
+                else None,
                 max_attempts=settings.worker_max_attempts,
                 scheduled_for=run_minute_utc,
             )
