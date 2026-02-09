@@ -28,7 +28,7 @@ const WEEK_DAYS = [
   { key: 6, label: 'Sábado' },
   { key: 0, label: 'Domingo' },
 ]
-const TIME_SLOTS = Array.from({ length: 16 }, (_, idx) => `${String(idx + 7).padStart(2, '0')}:00`)
+const TIME_SLOTS = Array.from({ length: 32 }, (_, idx) => `${String(7 + Math.floor(idx / 2)).padStart(2, '0')}:${idx % 2 === 0 ? '00' : '30'}`)
 const OBJECTIVE_OPTIONS = ['educacional', 'mini_case', 'prova_social', 'conversao', 'opiniao', 'bastidores']
 const SOURCE_MODE_OPTIONS = ['arxiv', 'prompt_only']
 const CTA_OPTIONS = ['comentario', 'dm', 'link', 'sem_cta']
@@ -55,6 +55,26 @@ function previewText(value, fallback = 'Usando prompt padrao') {
   const normalized = value.replace(/\s+/g, ' ').trim()
   if (normalized.length <= 180) return normalized
   return `${normalized.slice(0, 180)}...`
+}
+
+function buildEditorialManualInput(form) {
+  const now = new Date()
+  const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const topic = (form.topic || '').trim() || form.objective || 'educacional'
+  const lines = [
+    'Modo: postagem editorial sem busca externa.',
+    `Data atual: ${date}`,
+    `Tema central: ${topic}`,
+    `Tema de campanha: ${form.campaign_theme || topic}`,
+    `Publico alvo: ${form.audience || 'profissionais da area'}`,
+    `Objetivo editorial: ${form.objective || 'educacional'}`,
+    `CTA desejada: ${form.cta_type || 'comentario'}`,
+  ]
+  if (form.use_date_context) {
+    lines.push('Contexto sazonal/profissional: conecte o post com o momento do ano em perspectiva profissional.')
+  }
+  lines.push('Instrucoes: gerar post com valor pratico, linguagem objetiva e tom profissional.')
+  return lines.join('\n')
 }
 
 function parseDayPart(part) {
@@ -206,7 +226,17 @@ export default function App() {
   const [isCreateScheduleModalOpen, setIsCreateScheduleModalOpen] = useState(false)
 
   const [publishMode, setPublishMode] = useState('topic')
-  const [jobForm, setJobForm] = useState({ account_id: '', topic: '', paper_url: '', paper_text: '' })
+  const [jobForm, setJobForm] = useState({
+    account_id: '',
+    topic: '',
+    paper_url: '',
+    paper_text: '',
+    objective: 'educacional',
+    audience: '',
+    cta_type: 'comentario',
+    campaign_theme: '',
+    use_date_context: true,
+  })
 
   async function loadAll() {
     try {
@@ -455,8 +485,22 @@ export default function App() {
       if (publishMode === 'topic') payload.topic = jobForm.topic
       if (publishMode === 'url') payload.paper_url = jobForm.paper_url
       if (publishMode === 'text') payload.paper_text = jobForm.paper_text
+      if (publishMode === 'editorial') {
+        payload.topic = (jobForm.topic || '').trim() || jobForm.objective
+        payload.paper_text = buildEditorialManualInput(jobForm)
+      }
       await api('/jobs/publish-now', { method: 'POST', body: JSON.stringify(payload) })
-      setJobForm({ account_id: '', topic: '', paper_url: '', paper_text: '' })
+      setJobForm({
+        account_id: '',
+        topic: '',
+        paper_url: '',
+        paper_text: '',
+        objective: 'educacional',
+        audience: '',
+        cta_type: 'comentario',
+        campaign_theme: '',
+        use_date_context: true,
+      })
       await loadAll()
     } catch (e) {
       setError(`Erro ao criar job manual: ${e.message}`)
@@ -805,22 +849,26 @@ export default function App() {
                 <article className="panel">
                   <h3>Editar agenda</h3>
                   <form onSubmit={updateSchedule} className="form">
-                    <input placeholder="Tema central (opcional)" value={editScheduleForm.topic} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, topic: e.target.value })} />
-                    <select value={editScheduleForm.objective} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, objective: e.target.value })} required>
-                      {OBJECTIVE_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-                    </select>
-                    <input placeholder="Publico alvo" value={editScheduleForm.audience} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, audience: e.target.value })} />
-                    <input placeholder="Tema de campanha" value={editScheduleForm.campaign_theme} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, campaign_theme: e.target.value })} />
+                    <input placeholder="Tema central" value={editScheduleForm.topic} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, topic: e.target.value })} required={editScheduleForm.source_mode !== 'prompt_only'} />
                     <select value={editScheduleForm.source_mode} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, source_mode: e.target.value })} required>
                       {SOURCE_MODE_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
-                    <select value={editScheduleForm.cta_type} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, cta_type: e.target.value })} required>
-                      {CTA_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-                    </select>
-                    <label className="check">
-                      <input type="checkbox" checked={editScheduleForm.use_date_context} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, use_date_context: e.target.checked })} />
-                      Usar contexto de data/feriados
-                    </label>
+                    {editScheduleForm.source_mode === 'prompt_only' && (
+                      <>
+                        <select value={editScheduleForm.objective} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, objective: e.target.value })} required>
+                          {OBJECTIVE_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                        <input placeholder="Publico alvo" value={editScheduleForm.audience} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, audience: e.target.value })} />
+                        <input placeholder="Tema de campanha" value={editScheduleForm.campaign_theme} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, campaign_theme: e.target.value })} />
+                        <select value={editScheduleForm.cta_type} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, cta_type: e.target.value })} required>
+                          {CTA_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                        <label className="check">
+                          <input type="checkbox" checked={editScheduleForm.use_date_context} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, use_date_context: e.target.checked })} />
+                          Usar contexto de data/feriados
+                        </label>
+                      </>
+                    )}
                     <select value={editScheduleForm.day_of_week} onChange={(e) => setEditScheduleForm({ ...editScheduleForm, day_of_week: e.target.value })} required>
                       {WEEK_DAYS.map((day) => <option key={day.key} value={day.key}>{day.label}</option>)}
                     </select>
@@ -853,22 +901,26 @@ export default function App() {
                         <option key={account.id} value={account.id}>{account.name}</option>
                       ))}
                     </select>
-                    <input placeholder="Tema central (opcional)" value={scheduleForm.topic} onChange={(e) => setScheduleForm({ ...scheduleForm, topic: e.target.value })} />
-                    <select value={scheduleForm.objective} onChange={(e) => setScheduleForm({ ...scheduleForm, objective: e.target.value })} required>
-                      {OBJECTIVE_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-                    </select>
-                    <input placeholder="Publico alvo (ex: advogados, devs, medicos)" value={scheduleForm.audience} onChange={(e) => setScheduleForm({ ...scheduleForm, audience: e.target.value })} />
-                    <input placeholder="Tema de campanha (ex: automacao para escritorio)" value={scheduleForm.campaign_theme} onChange={(e) => setScheduleForm({ ...scheduleForm, campaign_theme: e.target.value })} />
+                    <input placeholder="Tema central" value={scheduleForm.topic} onChange={(e) => setScheduleForm({ ...scheduleForm, topic: e.target.value })} required={scheduleForm.source_mode !== 'prompt_only'} />
                     <select value={scheduleForm.source_mode} onChange={(e) => setScheduleForm({ ...scheduleForm, source_mode: e.target.value })} required>
                       {SOURCE_MODE_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
-                    <select value={scheduleForm.cta_type} onChange={(e) => setScheduleForm({ ...scheduleForm, cta_type: e.target.value })} required>
-                      {CTA_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-                    </select>
-                    <label className="check">
-                      <input type="checkbox" checked={scheduleForm.use_date_context} onChange={(e) => setScheduleForm({ ...scheduleForm, use_date_context: e.target.checked })} />
-                      Usar contexto de data/feriados
-                    </label>
+                    {scheduleForm.source_mode === 'prompt_only' && (
+                      <>
+                        <select value={scheduleForm.objective} onChange={(e) => setScheduleForm({ ...scheduleForm, objective: e.target.value })} required>
+                          {OBJECTIVE_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                        <input placeholder="Publico alvo (ex: advogados, devs, medicos)" value={scheduleForm.audience} onChange={(e) => setScheduleForm({ ...scheduleForm, audience: e.target.value })} />
+                        <input placeholder="Tema de campanha (ex: automacao para escritorio)" value={scheduleForm.campaign_theme} onChange={(e) => setScheduleForm({ ...scheduleForm, campaign_theme: e.target.value })} />
+                        <select value={scheduleForm.cta_type} onChange={(e) => setScheduleForm({ ...scheduleForm, cta_type: e.target.value })} required>
+                          {CTA_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                        <label className="check">
+                          <input type="checkbox" checked={scheduleForm.use_date_context} onChange={(e) => setScheduleForm({ ...scheduleForm, use_date_context: e.target.checked })} />
+                          Usar contexto de data/feriados
+                        </label>
+                      </>
+                    )}
                     <select value={scheduleForm.day_of_week} onChange={(e) => setScheduleForm({ ...scheduleForm, day_of_week: e.target.value })} required>
                       {WEEK_DAYS.map((day) => <option key={day.key} value={day.key}>{day.label}</option>)}
                     </select>
@@ -893,6 +945,7 @@ export default function App() {
                 <button className={publishMode === 'topic' ? 'active' : ''} onClick={() => setPublishMode('topic')}>Por tema</button>
                 <button className={publishMode === 'url' ? 'active' : ''} onClick={() => setPublishMode('url')}>Por link do paper</button>
                 <button className={publishMode === 'text' ? 'active' : ''} onClick={() => setPublishMode('text')}>Por texto do paper</button>
+                <button className={publishMode === 'editorial' ? 'active' : ''} onClick={() => setPublishMode('editorial')}>Editorial</button>
               </div>
               <form onSubmit={publishNow} className="form">
                 <select value={jobForm.account_id} onChange={(e) => setJobForm({ ...jobForm, account_id: e.target.value })} required>
@@ -910,6 +963,23 @@ export default function App() {
                 )}
                 {publishMode === 'text' && (
                   <textarea placeholder="Cole o texto/resumo do paper aqui" value={jobForm.paper_text} onChange={(e) => setJobForm({ ...jobForm, paper_text: e.target.value })} required />
+                )}
+                {publishMode === 'editorial' && (
+                  <>
+                    <input placeholder="Tema central (opcional)" value={jobForm.topic} onChange={(e) => setJobForm({ ...jobForm, topic: e.target.value })} />
+                    <select value={jobForm.objective} onChange={(e) => setJobForm({ ...jobForm, objective: e.target.value })} required>
+                      {OBJECTIVE_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                    <input placeholder="Publico alvo" value={jobForm.audience} onChange={(e) => setJobForm({ ...jobForm, audience: e.target.value })} />
+                    <input placeholder="Tema de campanha" value={jobForm.campaign_theme} onChange={(e) => setJobForm({ ...jobForm, campaign_theme: e.target.value })} />
+                    <select value={jobForm.cta_type} onChange={(e) => setJobForm({ ...jobForm, cta_type: e.target.value })} required>
+                      {CTA_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                    <label className="check">
+                      <input type="checkbox" checked={jobForm.use_date_context} onChange={(e) => setJobForm({ ...jobForm, use_date_context: e.target.checked })} />
+                      Usar contexto de data/feriados
+                    </label>
+                  </>
                 )}
 
                 <button type="submit">Criar job de publicação</button>
