@@ -1,0 +1,69 @@
+name: Deploy Main to Eyelid
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate Pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check workflow syntax context
+        run: |
+          echo "Workflow loaded for ref: $GITHUB_REF"
+          test -f .github/workflows/deploy-main.yml
+          echo "Validation finished"
+
+  deploy:
+    name: Deploy to Eyelid
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EYELID_SSH_PRIVATE_KEY }}
+
+      - name: Add server to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.EYELID_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy on server
+        env:
+          HOST: ${{ secrets.EYELID_HOST }}
+          USER: ${{ secrets.EYELID_USER }}
+          PORT: ${{ secrets.EYELID_SSH_PORT }}
+        run: |
+          set -euo pipefail
+          SSH_PORT="${PORT:-22}"
+
+          ssh -p "$SSH_PORT" "$USER@$HOST" <<'EOF'
+            set -euo pipefail
+            cd /opt/AutoFeedr
+
+            git fetch origin main
+            git checkout main
+            git reset --hard origin/main
+
+            docker compose up -d --build
+
+            curl -fsS http://127.0.0.1:8000/health
+          EOF
