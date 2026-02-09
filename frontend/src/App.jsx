@@ -1,9 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 
 function resolveApiBase() {
-  const fromEnv = import.meta.env.VITE_API_BASE
-  if (fromEnv && fromEnv.trim()) return fromEnv.trim()
-  return `${window.location.protocol}//${window.location.hostname}:8000`
+  const fromEnv = import.meta.env.VITE_API_BASE?.trim()
+  const fallback = `${window.location.protocol}//${window.location.hostname}:8000`
+  if (!fromEnv) return fallback
+
+  try {
+    const envUrl = new URL(fromEnv)
+    const isLoopback = ["localhost", "127.0.0.1", "::1"].includes(envUrl.hostname)
+    const pageIsLoopback = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname)
+    if (isLoopback && !pageIsLoopback) return fallback
+  } catch (_error) {
+    return fallback
+  }
+
+  return fromEnv
 }
 
 const API_BASE = resolveApiBase()
