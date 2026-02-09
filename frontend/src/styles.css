@@ -592,10 +592,14 @@ th {
 }
 
 .drawer-card {
-  width: min(620px, 96vw);
+  width: min(760px, 96vw);
   max-height: calc(100vh - 40px);
   overflow: auto;
-  justify-self: end;
+  justify-self: center;
+}
+
+.prompt-editor {
+  min-height: 200px;
 }
 
 .modal-subtitle {

@@ -624,8 +624,8 @@ export default function App() {
                     <details>
                       <summary>Prompts da conta</summary>
                       <div className="form details-form">
-                        <textarea placeholder="Prompt de geração (usa {informacoes})" value={editAccountForm.prompt_generation} onChange={(e) => setEditAccountForm({ ...editAccountForm, prompt_generation: e.target.value })} />
-                        <textarea placeholder="Prompt de tradução (usa {post_portugues})" value={editAccountForm.prompt_translation} onChange={(e) => setEditAccountForm({ ...editAccountForm, prompt_translation: e.target.value })} />
+                        <textarea className="prompt-editor" placeholder="Prompt de geração (usa {informacoes})" value={editAccountForm.prompt_generation} onChange={(e) => setEditAccountForm({ ...editAccountForm, prompt_generation: e.target.value })} />
+                        <textarea className="prompt-editor" placeholder="Prompt de tradução (usa {post_portugues})" value={editAccountForm.prompt_translation} onChange={(e) => setEditAccountForm({ ...editAccountForm, prompt_translation: e.target.value })} />
                         <button
                           type="button"
                           className="ghost"
