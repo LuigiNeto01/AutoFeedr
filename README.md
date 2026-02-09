@@ -37,3 +37,7 @@ python main.py
 - `Linkedin/`: autenticacao e postagem no LinkedIn
 - `post_scheduler/`: agenda de execucao
 - `data/`: arquivos temporarios gerados
+
+## CI/CD
+- Workflow de deploy automatico: `.github/workflows/deploy-main.yml`
+- Guia de configuracao: `docs/DEPLOY_PIPELINE.md`
