@@ -36,6 +36,13 @@ function toDateLabel(value) {
   return new Date(value).toLocaleString('pt-BR')
 }
 
+function previewText(value, fallback = 'Usando prompt padrao') {
+  if (!value || !value.trim()) return fallback
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  if (normalized.length <= 180) return normalized
+  return `${normalized.slice(0, 180)}...`
+}
+
 function parseDayPart(part) {
   if (part === '*') return [0, 1, 2, 3, 4, 5, 6]
   const values = new Set()
@@ -150,6 +157,8 @@ export default function App() {
     prompt_generation: '',
     prompt_translation: '',
   })
+  const [selectedAccountId, setSelectedAccountId] = useState(null)
+  const [isCreateAccountModalOpen, setIsCreateAccountModalOpen] = useState(false)
 
   const [scheduleForm, setScheduleForm] = useState({
     account_id: '',
@@ -207,6 +216,17 @@ export default function App() {
     }))
   }, [defaultPrompts])
 
+  useEffect(() => {
+    if (accounts.length === 0) {
+      setSelectedAccountId(null)
+      setEditingAccount(null)
+      return
+    }
+    if (!selectedAccountId || !accounts.some((account) => account.id === selectedAccountId)) {
+      setSelectedAccountId(accounts[0].id)
+    }
+  }, [accounts, selectedAccountId])
+
   const accountNameById = useMemo(
     () => Object.fromEntries(accounts.map((account) => [account.id, account.name])),
     [accounts]
@@ -253,6 +273,11 @@ export default function App() {
     return { success, failed, waiting }
   }, [jobs])
 
+  const selectedAccount = useMemo(
+    () => accounts.find((account) => account.id === selectedAccountId) || null,
+    [accounts, selectedAccountId]
+  )
+
   async function createAccount(event) {
     event.preventDefault()
     try {
@@ -264,6 +289,7 @@ export default function App() {
         prompt_generation: defaultPrompts.prompt_generation,
         prompt_translation: defaultPrompts.prompt_translation,
       })
+      setIsCreateAccountModalOpen(false)
       await loadAll()
     } catch (e) {
       setError(`Erro ao criar conta: ${e.message}`)
@@ -271,6 +297,7 @@ export default function App() {
   }
 
   function openEditAccount(account) {
+    setSelectedAccountId(account.id)
     setEditingAccount(account)
     setEditAccountForm({
       urn: account.urn,
@@ -279,6 +306,29 @@ export default function App() {
       prompt_generation: account.prompt_generation || defaultPrompts.prompt_generation || '',
       prompt_translation: account.prompt_translation || defaultPrompts.prompt_translation || '',
     })
+  }
+
+  function openCreateAccountModal() {
+    setAccountForm({
+      name: '',
+      token: '',
+      urn: '',
+      prompt_generation: defaultPrompts.prompt_generation || '',
+      prompt_translation: defaultPrompts.prompt_translation || '',
+    })
+    setIsCreateAccountModalOpen(true)
+  }
+
+  async function toggleAccountActive(account) {
+    try {
+      await api(`/accounts/${account.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ is_active: !account.is_active }),
+      })
+      await loadAll()
+    } catch (e) {
+      setError(`Erro ao atualizar status da conta: ${e.message}`)
+    }
   }
 
   async function updateAccount(event) {
@@ -446,92 +496,171 @@ export default function App() {
         )}
 
         {page === 'accounts' && (
-          <section className="panel-grid">
-            <article className="panel">
-              <h3>Cadastrar conta</h3>
-              <form onSubmit={createAccount} className="form">
-                <input placeholder="Nome interno" value={accountForm.name} onChange={(e) => setAccountForm({ ...accountForm, name: e.target.value })} required />
-                <input placeholder="URN (ou sufixo)" value={accountForm.urn} onChange={(e) => setAccountForm({ ...accountForm, urn: e.target.value })} required />
-                <textarea placeholder="Token" value={accountForm.token} onChange={(e) => setAccountForm({ ...accountForm, token: e.target.value })} required />
-                <details>
-                  <summary>Prompts personalizados (opcional)</summary>
-                  <div className="form details-form">
-                    <textarea placeholder="Prompt de geração (usa {informacoes})" value={accountForm.prompt_generation} onChange={(e) => setAccountForm({ ...accountForm, prompt_generation: e.target.value })} />
-                    <textarea placeholder="Prompt de tradução (usa {post_portugues})" value={accountForm.prompt_translation} onChange={(e) => setAccountForm({ ...accountForm, prompt_translation: e.target.value })} />
-                    <button
-                      type="button"
-                      className="ghost"
-                      onClick={() =>
-                        setAccountForm({
-                          ...accountForm,
-                          prompt_generation: defaultPrompts.prompt_generation,
-                          prompt_translation: defaultPrompts.prompt_translation,
-                        })
-                      }
-                    >
-                      Recarregar prompt padrão
-                    </button>
-                  </div>
-                </details>
-                <button type="submit">Salvar conta</button>
-              </form>
-            </article>
-
-            <article className="panel">
-              <h3>Contas cadastradas</h3>
-              <ul className="account-list">
-                {accounts.map((account) => (
-                  <li key={account.id}>
-                    <div>
-                      <strong>{account.name}</strong>
-                      <p>ID: {account.id} • URN: {account.urn}</p>
-                      <p>Prompt geração: {account.prompt_generation ? 'customizado' : 'padrão'}</p>
-                      <p>Prompt tradução: {account.prompt_translation ? 'customizado' : 'padrão'}</p>
-                    </div>
-                    <button onClick={() => openEditAccount(account)}>Editar</button>
-                  </li>
-                ))}
-              </ul>
-            </article>
-
-            {editingAccount && (
-              <article className="panel">
-                <h3>Editar conta: {editingAccount.name}</h3>
-                <form onSubmit={updateAccount} className="form">
-                  <input placeholder="URN" value={editAccountForm.urn} onChange={(e) => setEditAccountForm({ ...editAccountForm, urn: e.target.value })} required />
-                  <textarea placeholder="Novo token (opcional)" value={editAccountForm.token} onChange={(e) => setEditAccountForm({ ...editAccountForm, token: e.target.value })} />
-                  <details open>
-                    <summary>Prompts da conta</summary>
-                    <div className="form details-form">
-                      <textarea placeholder="Prompt de geração (usa {informacoes})" value={editAccountForm.prompt_generation} onChange={(e) => setEditAccountForm({ ...editAccountForm, prompt_generation: e.target.value })} />
-                      <textarea placeholder="Prompt de tradução (usa {post_portugues})" value={editAccountForm.prompt_translation} onChange={(e) => setEditAccountForm({ ...editAccountForm, prompt_translation: e.target.value })} />
+          <>
+            <section className="accounts-layout">
+              <article className="panel account-master">
+                <div className="account-master-head">
+                  <h3>Contas</h3>
+                  <button type="button" onClick={openCreateAccountModal}>Nova conta</button>
+                </div>
+                <ul className="account-master-list">
+                  {accounts.map((account) => (
+                    <li key={account.id}>
                       <button
                         type="button"
-                        className="ghost"
-                        onClick={() =>
-                          setEditAccountForm({
-                            ...editAccountForm,
-                            prompt_generation: defaultPrompts.prompt_generation,
-                            prompt_translation: defaultPrompts.prompt_translation,
-                          })
-                        }
+                        className={selectedAccountId === account.id ? 'account-row active' : 'account-row'}
+                        onClick={() => setSelectedAccountId(account.id)}
                       >
-                        Usar prompt padrão
+                        <span className="account-row-main">
+                          <strong>{account.name}</strong>
+                          <small>ID {account.id}</small>
+                        </span>
+                        <span className={account.is_active ? 'badge ok' : 'badge off'}>
+                          {account.is_active ? 'Ativa' : 'Inativa'}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+
+              <article className="panel account-detail">
+                {!selectedAccount && <p className="empty">Nenhuma conta cadastrada.</p>}
+                {selectedAccount && (
+                  <>
+                    <div className="account-detail-head">
+                      <div>
+                        <h3>{selectedAccount.name}</h3>
+                        <p>Conta #{selectedAccount.id}</p>
+                      </div>
+                      <span className={selectedAccount.is_active ? 'badge ok' : 'badge off'}>
+                        {selectedAccount.is_active ? 'Ativa' : 'Inativa'}
+                      </span>
+                    </div>
+
+                    <div className="account-meta-grid">
+                      <div>
+                        <p className="meta-label">URN</p>
+                        <p className="meta-value">{selectedAccount.urn}</p>
+                      </div>
+                      <div>
+                        <p className="meta-label">Atualizada em</p>
+                        <p className="meta-value">{toDateLabel(selectedAccount.updated_at)}</p>
+                      </div>
+                    </div>
+
+                    <div className="account-actions">
+                      <button type="button" onClick={() => openEditAccount(selectedAccount)}>Editar conta</button>
+                      <button type="button" className="ghost" onClick={() => toggleAccountActive(selectedAccount)}>
+                        {selectedAccount.is_active ? 'Inativar' : 'Ativar'}
                       </button>
                     </div>
-                  </details>
-                  <label className="check">
-                    <input type="checkbox" checked={editAccountForm.is_active} onChange={(e) => setEditAccountForm({ ...editAccountForm, is_active: e.target.checked })} />
-                    Conta ativa
-                  </label>
-                  <div className="actions">
-                    <button type="submit">Salvar alterações</button>
-                    <button type="button" className="ghost" onClick={() => setEditingAccount(null)}>Cancelar</button>
-                  </div>
-                </form>
+
+                    <div className="prompt-preview-grid">
+                      <article className="prompt-preview">
+                        <p className="meta-label">Prompt de geração</p>
+                        <p>{previewText(selectedAccount.prompt_generation)}</p>
+                      </article>
+                      <article className="prompt-preview">
+                        <p className="meta-label">Prompt de tradução</p>
+                        <p>{previewText(selectedAccount.prompt_translation)}</p>
+                      </article>
+                    </div>
+                  </>
+                )}
               </article>
+            </section>
+
+            {isCreateAccountModalOpen && (
+              <div className="modal-overlay" onClick={() => setIsCreateAccountModalOpen(false)}>
+                <article className="panel modal-card" onClick={(e) => e.stopPropagation()}>
+                  <h3>Nova conta</h3>
+                  <form onSubmit={createAccount} className="form">
+                    <input placeholder="Nome interno" value={accountForm.name} onChange={(e) => setAccountForm({ ...accountForm, name: e.target.value })} required />
+                    <input placeholder="URN (ou sufixo)" value={accountForm.urn} onChange={(e) => setAccountForm({ ...accountForm, urn: e.target.value })} required />
+                    <textarea placeholder="Token" value={accountForm.token} onChange={(e) => setAccountForm({ ...accountForm, token: e.target.value })} required />
+                    <details>
+                      <summary>Prompts personalizados (opcional)</summary>
+                      <div className="form details-form">
+                        <textarea placeholder="Prompt de geração (usa {informacoes})" value={accountForm.prompt_generation} onChange={(e) => setAccountForm({ ...accountForm, prompt_generation: e.target.value })} />
+                        <textarea placeholder="Prompt de tradução (usa {post_portugues})" value={accountForm.prompt_translation} onChange={(e) => setAccountForm({ ...accountForm, prompt_translation: e.target.value })} />
+                        <button
+                          type="button"
+                          className="ghost"
+                          onClick={() =>
+                            setAccountForm({
+                              ...accountForm,
+                              prompt_generation: defaultPrompts.prompt_generation,
+                              prompt_translation: defaultPrompts.prompt_translation,
+                            })
+                          }
+                        >
+                          Usar prompt padrão
+                        </button>
+                      </div>
+                    </details>
+                    <div className="actions">
+                      <button type="submit">Salvar conta</button>
+                      <button type="button" className="ghost" onClick={() => setIsCreateAccountModalOpen(false)}>Cancelar</button>
+                    </div>
+                  </form>
+                </article>
+              </div>
             )}
-          </section>
+
+            {editingAccount && (
+              <div className="modal-overlay" onClick={() => setEditingAccount(null)}>
+                <article className="panel drawer-card" onClick={(e) => e.stopPropagation()}>
+                  <h3>Editar conta: {editingAccount.name}</h3>
+                  <form onSubmit={updateAccount} className="form">
+                    <details open>
+                      <summary>Credenciais</summary>
+                      <div className="form details-form">
+                        <input placeholder="URN" value={editAccountForm.urn} onChange={(e) => setEditAccountForm({ ...editAccountForm, urn: e.target.value })} required />
+                        <textarea placeholder="Novo token (opcional)" value={editAccountForm.token} onChange={(e) => setEditAccountForm({ ...editAccountForm, token: e.target.value })} />
+                      </div>
+                    </details>
+
+                    <details>
+                      <summary>Prompts da conta</summary>
+                      <div className="form details-form">
+                        <textarea placeholder="Prompt de geração (usa {informacoes})" value={editAccountForm.prompt_generation} onChange={(e) => setEditAccountForm({ ...editAccountForm, prompt_generation: e.target.value })} />
+                        <textarea placeholder="Prompt de tradução (usa {post_portugues})" value={editAccountForm.prompt_translation} onChange={(e) => setEditAccountForm({ ...editAccountForm, prompt_translation: e.target.value })} />
+                        <button
+                          type="button"
+                          className="ghost"
+                          onClick={() =>
+                            setEditAccountForm({
+                              ...editAccountForm,
+                              prompt_generation: defaultPrompts.prompt_generation,
+                              prompt_translation: defaultPrompts.prompt_translation,
+                            })
+                          }
+                        >
+                          Restaurar padrão
+                        </button>
+                      </div>
+                    </details>
+
+                    <details>
+                      <summary>Configurações</summary>
+                      <div className="form details-form">
+                        <label className="check">
+                          <input type="checkbox" checked={editAccountForm.is_active} onChange={(e) => setEditAccountForm({ ...editAccountForm, is_active: e.target.checked })} />
+                          Conta ativa
+                        </label>
+                      </div>
+                    </details>
+
+                    <div className="actions">
+                      <button type="submit">Salvar alterações</button>
+                      <button type="button" className="ghost" onClick={() => setEditingAccount(null)}>Cancelar</button>
+                    </div>
+                  </form>
+                </article>
+              </div>
+            )}
+          </>
         )}
 
         {page === 'agenda' && (
