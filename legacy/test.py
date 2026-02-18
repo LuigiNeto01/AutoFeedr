@@ -1,6 +1,6 @@
-from arxiv_reciver.main import get_article
-from Linkedin import FazerPost
-from Escritor import gerar_post
+from packages.arxiv_reciver.main import get_article
+from packages.Linkedin import FazerPost
+from packages.Escritor import gerar_post
 
 if __name__ == "__main__":
     print("Iniciando teste manual de fluxo completo...")

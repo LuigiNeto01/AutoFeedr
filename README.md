@@ -52,4 +52,5 @@ Campos importantes:
 - `backend/`: API e modelos do banco.
 - `worker/`: scheduler e processamento de jobs.
 - `frontend/`: painel administrativo.
-- `Escritor/`, `Linkedin/`, `arxiv_reciver/`: modulos reaproveitados do fluxo legado.
+- `packages/`: bibliotecas reutilizaveis (`Escritor`, `Linkedin`, `arxiv_reciver`, `shared`).
+- `legacy/`: fluxo antigo preservado para compatibilidade/referencia.

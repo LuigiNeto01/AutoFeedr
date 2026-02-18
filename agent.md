@@ -42,14 +42,14 @@ Servicos principais:
    - reprograma com backoff linear (2 min por tentativa),
    - falha final ao atingir `WORKER_MAX_ATTEMPTS`.
 
-## 4) Modulos legados reaproveitados
+## 4) Modulos reaproveitados (organizados em `packages/`)
 
-1. `Escritor/`
+1. `packages/Escritor/`
    - Geracao e traducao com `google-genai`.
    - Limite de tamanho para postagem no LinkedIn (3000 caracteres).
-2. `Linkedin/`
+2. `packages/Linkedin/`
    - Publicacao no LinkedIn com validacoes de token/URN e tratamento de erro.
-3. `arxiv_reciver/`
+3. `packages/arxiv_reciver/`
    - Busca de artigo por topico quando o job e baseado em `topic`.
 
 ## 5) Estado atual da UI

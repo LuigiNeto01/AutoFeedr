@@ -1,4 +1,4 @@
-from service import run_service
+from legacy.service import run_service
 
 
 if __name__ == "__main__":

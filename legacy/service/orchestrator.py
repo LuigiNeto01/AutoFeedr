@@ -5,11 +5,11 @@ import traceback
 from datetime import datetime
 from time import sleep
 
-from Escritor import gerar_post
-from Linkedin import FazerPost
-from arxiv_reciver.main import get_article
-from post_scheduler.main import exec_scheduler
-from shared import ExecutionStateStore, configure_logging, log_event
+from packages.Escritor import gerar_post
+from packages.Linkedin import FazerPost
+from packages.arxiv_reciver.main import get_article
+from legacy.post_scheduler.main import exec_scheduler
+from packages.shared import ExecutionStateStore, configure_logging, log_event
 
 
 def _process_schedule(

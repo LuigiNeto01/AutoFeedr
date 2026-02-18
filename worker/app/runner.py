@@ -11,13 +11,13 @@ from croniter import croniter
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from Escritor import gerar_post
-from Linkedin.src.postLinkedin import postar_no_linkedin
+from packages.Escritor import gerar_post
+from packages.Linkedin.src.postLinkedin import postar_no_linkedin
 from app.core.security import build_fernet, decrypt_text
 from app.core.settings import settings
 from app.db.session import SessionLocal
 from app.models.models import Job, JobLog, LinkedinAccount, Schedule, ScheduleRun
-from shared import configure_logging, log_event
+from packages.shared import configure_logging, log_event
 
 
 logger = logging.getLogger("autofeedr.worker")
@@ -177,7 +177,7 @@ def _build_content_input(job: Job) -> str:
         return _paper_info_from_url(job.paper_url)
 
     if job.topic:
-        from arxiv_reciver.main import get_article
+        from packages.arxiv_reciver.main import get_article
 
         articles = get_article(
             topics=[job.topic],

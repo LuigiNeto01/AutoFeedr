@@ -1,4 +1,4 @@
-from Escritor.src.utils import conectar_gemini, gerar_resposta, listar_modelos
+from packages.Escritor.src.utils import conectar_gemini, gerar_resposta, listar_modelos
 
 
 def main() -> None:

@@ -9,7 +9,7 @@ from app.core.security import build_fernet, encrypt_text
 from app.core.settings import settings
 from app.db.session import get_db
 from app.models.models import Job, LinkedinAccount, Schedule
-from Escritor.src.prompt import PROMPT_GERACAO_POST, PROMPT_TRADUCAO
+from packages.Escritor.src.prompt import PROMPT_GERACAO_POST, PROMPT_TRADUCAO
 from app.schemas.schemas import (
     AccountCreate,
     AccountOut,
