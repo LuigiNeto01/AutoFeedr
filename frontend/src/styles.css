@@ -17,6 +17,32 @@ body {
   min-height: 100vh;
 }
 
+.mode-switch {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #0a1020;
+  border-bottom: 1px solid #23355a;
+}
+
+.mode-btn {
+  border: 1px solid #334976;
+  background: #0f1a31;
+  color: #f4f7ff;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mode-btn.active {
+  background: linear-gradient(135deg, #2d67e5, #2549a9);
+}
+
 .loading {
   min-height: 100vh;
   display: grid;
