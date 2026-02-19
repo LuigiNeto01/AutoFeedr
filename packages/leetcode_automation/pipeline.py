@@ -102,7 +102,7 @@ def execute_leetcode_pipeline(payload: LeetCodePipelineInput) -> LeetCodePipelin
         repo_ssh_url=payload.repo_ssh_url,
         default_branch=payload.default_branch,
         solutions_dir=payload.solutions_dir,
-        problem_frontend_id=problem.frontend_id,
+        problem_question_id=problem.question_id,
         problem_slug=problem.title_slug,
         problem_title=problem.title,
         problem_difficulty=problem.difficulty,

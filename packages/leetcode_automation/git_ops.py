@@ -20,7 +20,7 @@ def publish_to_github(
     repo_ssh_url: str,
     default_branch: str,
     solutions_dir: str,
-    problem_frontend_id: str,
+    problem_question_id: str,
     problem_slug: str,
     problem_title: str,
     problem_difficulty: str,
@@ -92,19 +92,18 @@ def publish_to_github(
             _update_solved_metadata(
                 repo_path=repo_path,
                 repo_ssh_url=repo_ssh_url,
-                problem_frontend_id=problem_frontend_id,
+                problem_question_id=problem_question_id,
                 problem_slug=problem_slug,
                 problem_title=problem_title,
                 problem_difficulty=difficulty_dir,
                 solution_rel_path=solution_rel_path,
             )
-            _update_readme_index(repo_path=repo_path)
 
             _run_command(["git", "config", "user.name", commit_author_name], cwd=repo_path, env=git_env)
             _run_command(["git", "config", "user.email", commit_author_email], cwd=repo_path, env=git_env)
 
             _run_command(
-                ["git", "add", solution_rel_path, "metadata/solved_problems.json", "README.md"],
+                ["git", "add", solution_rel_path, "metadata/solved_problems.json"],
                 cwd=repo_path,
                 env=git_env,
             )
@@ -249,7 +248,7 @@ def _parse_repository_name(repo_ssh_url: str) -> str:
 def _update_solved_metadata(
     repo_path: Path,
     repo_ssh_url: str,
-    problem_frontend_id: str,
+    problem_question_id: str,
     problem_slug: str,
     problem_title: str,
     problem_difficulty: str,
@@ -271,11 +270,12 @@ def _update_solved_metadata(
     if not isinstance(items, list):
         items = []
 
-    problem_id = str(problem_frontend_id).strip()
+    question_id = str(problem_question_id).strip()
     items = [
         item for item in items
         if not (
-            str(item.get("frontend_id", "")).strip() == problem_id
+            str(item.get("question_id", "")).strip() == question_id
+            or str(item.get("frontend_id", "")).strip() == question_id
             or str(item.get("slug", "")).strip() == problem_slug
         )
     ]
@@ -283,7 +283,7 @@ def _update_solved_metadata(
     now = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     items.append(
         {
-            "frontend_id": problem_id,
+            "question_id": question_id,
             "slug": problem_slug,
             "title": problem_title,
             "difficulty": problem_difficulty,
@@ -293,62 +293,10 @@ def _update_solved_metadata(
         }
     )
 
-    items.sort(key=lambda item: (item.get("difficulty", ""), item.get("frontend_id", ""), item.get("slug", "")))
+    items.sort(key=lambda item: (item.get("difficulty", ""), item.get("question_id", ""), item.get("slug", "")))
     payload = {
         "repository": _parse_repository_name(repo_ssh_url),
         "updated_at": now,
         "items": items,
     }
     metadata_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-
-
-def _update_readme_index(repo_path: Path) -> None:
-    metadata_path = repo_path / "metadata" / "solved_problems.json"
-    if not metadata_path.exists():
-        return
-
-    try:
-        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return
-    items = payload.get("items")
-    if not isinstance(items, list):
-        return
-
-    lines = [
-        "## Solucoes LeetCode",
-        "",
-        "<!-- AUTOFEEDR:START -->",
-    ]
-    if not items:
-        lines.append("- Nenhuma solução registrada ainda.")
-    else:
-        for item in items:
-            frontend_id = str(item.get("frontend_id", "")).strip()
-            slug = str(item.get("slug", "")).strip()
-            title = str(item.get("title", "")).strip()
-            difficulty = str(item.get("difficulty", "")).strip() or "easy"
-            path = str(item.get("path", "")).strip()
-            if not path:
-                continue
-            lines.append(f"- `{frontend_id}` [{title}](./{path}) - `{difficulty}` - `{slug}`")
-    lines.extend(["<!-- AUTOFEEDR:END -->", ""])
-    block = "\n".join(lines)
-
-    readme_path = repo_path / "README.md"
-    if readme_path.exists():
-        current = readme_path.read_text(encoding="utf-8")
-    else:
-        current = "# leetcode-daily-challenges\n\n"
-
-    if "<!-- AUTOFEEDR:START -->" in current and "<!-- AUTOFEEDR:END -->" in current:
-        updated = re.sub(
-            r"<!-- AUTOFEEDR:START -->.*?<!-- AUTOFEEDR:END -->",
-            "<!-- AUTOFEEDR:START -->\n" + "\n".join(lines[3:-1]) + "\n<!-- AUTOFEEDR:END -->",
-            current,
-            flags=re.S,
-        )
-        readme_path.write_text(updated, encoding="utf-8")
-        return
-
-    readme_path.write_text(current.rstrip() + "\n\n" + block, encoding="utf-8")
