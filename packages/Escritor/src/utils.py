@@ -105,7 +105,8 @@ def _gerar_resposta_openai(modelo: AISession, prompt: str) -> str:
         },
         timeout=60,
     )
-    response.raise_for_status()
+    if response.status_code >= 400:
+        raise RuntimeError(f"OpenAI HTTP {response.status_code}: {response.text}")
     payload: dict[str, Any] = response.json()
 
     direct_output = (payload.get("output_text") or "").strip()
