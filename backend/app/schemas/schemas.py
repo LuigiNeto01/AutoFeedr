@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime
+
 from pydantic import BaseModel, Field, field_validator
+
+
+GITHUB_REPO_SSH_REGEX = re.compile(r"^git@github\.com:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:\.git)?$")
 
 
 class AccountCreate(BaseModel):
@@ -124,6 +129,208 @@ class JobOut(BaseModel):
     next_retry_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class GitHubAccountCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    ssh_private_key: str = Field(min_length=40)
+    ssh_passphrase: str | None = None
+    is_active: bool = True
+
+
+class GitHubAccountUpdate(BaseModel):
+    ssh_private_key: str | None = None
+    ssh_passphrase: str | None = None
+    is_active: bool | None = None
+
+
+class GitHubAccountOut(BaseModel):
+    id: int
+    name: str
+    has_ssh_key: bool
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class GitHubRepositoryCreate(BaseModel):
+    account_id: int
+    repo_ssh_url: str
+    default_branch: str = Field(default="main", min_length=1, max_length=64)
+    solutions_dir: str = Field(default="leetcode/python", min_length=1, max_length=255)
+    commit_author_name: str = Field(min_length=2, max_length=120)
+    commit_author_email: str = Field(min_length=5, max_length=255)
+    selection_strategy: str = "random"
+    difficulty_policy: str = "free_any"
+    is_active: bool = True
+
+    @field_validator("repo_ssh_url")
+    @classmethod
+    def validate_repo_ssh_url(cls, value: str) -> str:
+        normalized = value.strip()
+        if not GITHUB_REPO_SSH_REGEX.match(normalized):
+            raise ValueError("Use repo_ssh_url no formato git@github.com:owner/repo.git")
+        return normalized
+
+    @field_validator("solutions_dir")
+    @classmethod
+    def normalize_solutions_dir(cls, value: str) -> str:
+        cleaned = value.strip().strip("/")
+        if not cleaned:
+            raise ValueError("solutions_dir nao pode ser vazio")
+        return cleaned
+
+
+class GitHubRepositoryUpdate(BaseModel):
+    default_branch: str | None = Field(default=None, min_length=1, max_length=64)
+    solutions_dir: str | None = Field(default=None, min_length=1, max_length=255)
+    commit_author_name: str | None = Field(default=None, min_length=2, max_length=120)
+    commit_author_email: str | None = Field(default=None, min_length=5, max_length=255)
+    selection_strategy: str | None = None
+    difficulty_policy: str | None = None
+    is_active: bool | None = None
+
+    @field_validator("solutions_dir")
+    @classmethod
+    def normalize_solutions_dir(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        cleaned = value.strip().strip("/")
+        if not cleaned:
+            raise ValueError("solutions_dir nao pode ser vazio")
+        return cleaned
+
+
+class GitHubRepositoryOut(BaseModel):
+    id: int
+    account_id: int
+    repo_ssh_url: str
+    default_branch: str
+    solutions_dir: str
+    commit_author_name: str
+    commit_author_email: str
+    selection_strategy: str
+    difficulty_policy: str
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class LeetCodeRunNowCreate(BaseModel):
+    repository_id: int
+    selection_strategy: str | None = None
+    difficulty_policy: str | None = None
+    problem_slug: str | None = None
+    max_attempts: int | None = Field(default=None, ge=1, le=10)
+
+    @field_validator("problem_slug")
+    @classmethod
+    def normalize_problem_slug(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+
+class LeetCodeScheduleCreate(BaseModel):
+    repository_id: int
+    cron_expr: str | None = Field(default=None, min_length=9, max_length=120)
+    day_of_week: int | None = Field(default=None, ge=0, le=6)
+    time_local: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
+    timezone: str = "America/Sao_Paulo"
+    selection_strategy: str | None = None
+    difficulty_policy: str | None = None
+    max_attempts: int = Field(default=5, ge=1, le=10)
+    is_active: bool = True
+
+
+class LeetCodeScheduleUpdate(BaseModel):
+    cron_expr: str | None = None
+    day_of_week: int | None = Field(default=None, ge=0, le=6)
+    time_local: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
+    timezone: str | None = None
+    selection_strategy: str | None = None
+    difficulty_policy: str | None = None
+    max_attempts: int | None = Field(default=None, ge=1, le=10)
+    is_active: bool | None = None
+
+
+class LeetCodeScheduleOut(BaseModel):
+    id: int
+    repository_id: int
+    cron_expr: str
+    day_of_week: int | None
+    time_local: str | None
+    timezone: str
+    selection_strategy: str | None
+    difficulty_policy: str | None
+    max_attempts: int
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class LeetCodeJobOut(BaseModel):
+    id: int
+    repository_id: int
+    schedule_id: int | None
+    source: str
+    status: str
+    attempts: int
+    max_attempts: int
+    selection_strategy: str | None
+    difficulty_policy: str | None
+    problem_frontend_id: str | None
+    problem_slug: str | None
+    problem_title: str | None
+    problem_difficulty: str | None
+    solution_path: str | None
+    tests_path: str | None
+    commit_sha: str | None
+    commit_url: str | None
+    error_message: str | None
+    scheduled_for: datetime
+    next_retry_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class LeetCodeJobLogOut(BaseModel):
+    id: int
+    job_id: int
+    level: str
+    message: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class LeetCodeCompletedOut(BaseModel):
+    id: int
+    repository_id: int
+    job_id: int
+    problem_frontend_id: str
+    problem_slug: str
+    problem_title: str
+    problem_difficulty: str
+    commit_sha: str
+    created_at: datetime
 
     class Config:
         from_attributes = True

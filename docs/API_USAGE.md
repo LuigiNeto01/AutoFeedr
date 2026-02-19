@@ -428,3 +428,136 @@ curl -s -X POST http://localhost:8000/jobs/publish-now \
 ```bash
 curl -s "http://localhost:8000/jobs?limit=20"
 ```
+
+## 9) Automacao LeetCode -> GitHub
+
+### 9.1 Cadastrar conta GitHub (SSH)
+
+`POST /github/accounts`
+
+Request body:
+
+```json
+{
+  "name": "github-main",
+  "ssh_private_key": "-----BEGIN OPENSSH PRIVATE KEY-----...",
+  "ssh_passphrase": null,
+  "is_active": true
+}
+```
+
+Observacoes:
+
+1. `ssh_private_key` e input-only (nunca retorna na API).
+2. Chave e passphrase sao criptografadas no banco.
+
+### 9.2 Listar/atualizar contas GitHub
+
+1. `GET /github/accounts`
+2. `PUT /github/accounts/{account_id}`
+
+Body de update aceita:
+
+1. `ssh_private_key`
+2. `ssh_passphrase`
+3. `is_active`
+
+### 9.3 Cadastrar repositorio GitHub
+
+`POST /github/repositories`
+
+```json
+{
+  "account_id": 1,
+  "repo_ssh_url": "git@github.com:owner/leetcode-sandbox.git",
+  "default_branch": "main",
+  "solutions_dir": "leetcode/python",
+  "commit_author_name": "AutoFeedr Bot",
+  "commit_author_email": "bot@example.com",
+  "selection_strategy": "random",
+  "difficulty_policy": "free_any",
+  "is_active": true
+}
+```
+
+Endpoints relacionados:
+
+1. `GET /github/repositories`
+2. `PUT /github/repositories/{repository_id}`
+
+### 9.4 Criar job imediato LeetCode
+
+`POST /leetcode/jobs/run-now`
+
+```json
+{
+  "repository_id": 1,
+  "selection_strategy": "random",
+  "difficulty_policy": "free_any",
+  "problem_slug": null,
+  "max_attempts": 5
+}
+```
+
+Campos opcionais:
+
+1. `selection_strategy`: `random`, `easy_first`, `sequential`
+2. `difficulty_policy`: `free_any`, `free_easy`, `free_easy_medium`
+3. `problem_slug`: forca problema especifico
+4. `max_attempts`: limite de tentativas de correcao
+
+### 9.5 Consultar jobs LeetCode
+
+1. `GET /leetcode/jobs?limit=50&repository_id=1`
+2. `GET /leetcode/jobs/{job_id}`
+3. `GET /leetcode/jobs/{job_id}/logs`
+
+Status possiveis:
+
+1. `pending`
+2. `running`
+3. `retry`
+4. `success`
+5. `failed`
+
+### 9.6 Agendar automacao LeetCode
+
+1. `POST /leetcode/schedules`
+2. `GET /leetcode/schedules`
+3. `PUT /leetcode/schedules/{schedule_id}`
+
+Body de criacao:
+
+```json
+{
+  "repository_id": 1,
+  "day_of_week": 1,
+  "time_local": "08:30",
+  "timezone": "America/Sao_Paulo",
+  "selection_strategy": "random",
+  "difficulty_policy": "free_any",
+  "max_attempts": 5,
+  "is_active": true
+}
+```
+
+Regra:
+
+1. Envie `cron_expr` ou `day_of_week + time_local`.
+
+### 9.7 Consultar problemas ja resolvidos
+
+`GET /leetcode/completed?repository_id=1&limit=100`
+
+Retorna historico usado para deduplicacao de desafios no mesmo repositorio.
+
+## 10) Configuracoes adicionais de runtime
+
+Novas variaveis em `.env`:
+
+1. `LEETCODE_GRAPHQL_URL`
+2. `LEETCODE_HTTP_TIMEOUT_SECONDS`
+3. `LEETCODE_DEFAULT_MAX_ATTEMPTS`
+4. `LEETCODE_TEST_TIMEOUT_SECONDS`
+5. `LEETCODE_RETRY_BASE_MINUTES`
+6. `WORKER_TMP_DIR`

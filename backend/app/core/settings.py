@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     default_timezone: str = "America/Sao_Paulo"
     worker_poll_seconds: int = 15
     worker_max_attempts: int = 3
+    leetcode_graphql_url: str = "https://leetcode.com/graphql"
+    leetcode_http_timeout_seconds: int = 20
+    leetcode_default_max_attempts: int = 5
+    leetcode_test_timeout_seconds: int = 20
+    leetcode_retry_base_minutes: int = 2
+    worker_tmp_dir: str = "/tmp/autofeedr"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

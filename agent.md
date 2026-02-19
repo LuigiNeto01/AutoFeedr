@@ -1,13 +1,10 @@
 # AutoFeedr - Referencia Operacional Atual (2026-02-08)
 
 ## 1) Intuito do projeto
-O AutoFeedr e uma plataforma para operacao de postagens tecnicas no LinkedIn com multiplas contas, combinando:
+O AutoFeedr e uma plataforma com dois fluxos principais:
 
-1. Cadastro de contas LinkedIn.
-2. Agenda recorrente por conta com timezone.
-3. Publicacao imediata sob demanda (tema, URL de paper ou texto).
-4. Geracao de post via Gemini com traducao e limite para LinkedIn.
-5. Execucao automatica por worker com retries.
+1. LinkedIn: cadastro de contas, agenda recorrente, publicacao imediata e geracao via Gemini.
+2. LeetCode -> GitHub: selecao de desafios nao pagos, geracao/correcao de solucao Python, testes e commit automatizado.
 
 ## 2) Arquitetura atual (MVP com base solida)
 
@@ -18,11 +15,11 @@ Servicos principais:
    - Criptografa tokens LinkedIn no banco com Fernet.
 2. `worker/` (Python)
    - Enfileira jobs de agendas usando `croniter` + timezone por agenda.
-   - Processa jobs pendentes com retry automatico.
+   - Processa jobs pendentes de LinkedIn e LeetCode com retry automatico.
 3. `frontend/` (React + Vite)
    - Painel web com sidebar e 4 telas: Home, Contas, Agenda, Publicar.
 4. `postgres` (Docker)
-   - Persistencia de contas, agendas, jobs, logs de job e deduplicacao de execucao por minuto.
+   - Persistencia de contas, agendas, jobs, logs e deduplicacao por execucao/problema.
 
 ## 3) Fluxo de negocio
 
