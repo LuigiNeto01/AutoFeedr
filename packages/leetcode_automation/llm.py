@@ -110,6 +110,13 @@ def _fallback_solution_code(problem: LeetCodeProblemDetail) -> str | None:
             "            seen[value] = i\n"
             "        return []\n"
         )
+    if slug == "valid-palindrome":
+        return (
+            "class Solution:\n"
+            "    def isPalindrome(self, s):\n"
+            "        filtered = [ch.lower() for ch in s if ch.isalnum()]\n"
+            "        return filtered == filtered[::-1]\n"
+        )
     return None
 
 
@@ -125,6 +132,17 @@ def _fallback_tests_code(problem: LeetCodeProblemDetail) -> str | None:
             "    assert ans == [1, 2], f'expected [1,2], got {ans}'\n"
             "    ans = s.twoSum([3, 3], 6)\n"
             "    assert ans == [0, 1], f'expected [0,1], got {ans}'\n\n"
+            "if __name__ == '__main__':\n"
+            "    run_tests()\n"
+        )
+    if slug == "valid-palindrome":
+        return (
+            "from solution import Solution\n\n"
+            "def run_tests():\n"
+            "    s = Solution()\n"
+            "    assert s.isPalindrome('A man, a plan, a canal: Panama') is True\n"
+            "    assert s.isPalindrome('race a car') is False\n"
+            "    assert s.isPalindrome(' ') is True\n\n"
             "if __name__ == '__main__':\n"
             "    run_tests()\n"
         )
