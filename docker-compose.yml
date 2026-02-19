@@ -54,7 +54,7 @@ services:
       dockerfile: Dockerfile
     container_name: autofeedr-frontend
     environment:
-      VITE_API_BASE: http://localhost:8000
+      VITE_API_BASE: http://localhost:8001
     ports:
       - "5173:5173"
     depends_on:
