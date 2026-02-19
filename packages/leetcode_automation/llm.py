@@ -24,14 +24,20 @@ def generate_solution_code(session: AISession, problem: LeetCodeProblemDetail) -
         sample_test_case=problem.sample_test_case,
         metadata_json=json.dumps(problem.metadata, ensure_ascii=False, indent=2),
     )
-    output = gerar_resposta(session, prompt)
+    ai_error = ""
+    output = ""
+    try:
+        output = gerar_resposta(session, prompt)
+    except Exception as exc:
+        ai_error = str(exc)
     if output:
         return extract_python_code(output)
 
     fallback = _fallback_solution_code(problem)
     if fallback:
         return fallback
-    raise RuntimeError("Falha ao gerar solucao Python na IA.")
+    suffix = f" Causa: {ai_error}" if ai_error else ""
+    raise RuntimeError(f"Falha ao gerar solucao Python na IA.{suffix}")
 
 
 def generate_tests_code(session: AISession, problem: LeetCodeProblemDetail, solution_code: str) -> str:
@@ -45,14 +51,20 @@ def generate_tests_code(session: AISession, problem: LeetCodeProblemDetail, solu
         metadata_json=json.dumps(problem.metadata, ensure_ascii=False, indent=2),
         solution_code=solution_code,
     )
-    output = gerar_resposta(session, prompt)
+    ai_error = ""
+    output = ""
+    try:
+        output = gerar_resposta(session, prompt)
+    except Exception as exc:
+        ai_error = str(exc)
     if output:
         return extract_python_code(output)
 
     fallback = _fallback_tests_code(problem)
     if fallback:
         return fallback
-    raise RuntimeError("Falha ao gerar testes Python na IA.")
+    suffix = f" Causa: {ai_error}" if ai_error else ""
+    raise RuntimeError(f"Falha ao gerar testes Python na IA.{suffix}")
 
 
 def fix_solution_code(
@@ -71,9 +83,10 @@ def fix_solution_code(
         tests_code=tests_code,
         failure_output=failure_output,
     )
-    output = gerar_resposta(session, prompt)
-    if not output:
-        raise RuntimeError("Falha ao corrigir solucao na IA.")
+    try:
+        output = gerar_resposta(session, prompt)
+    except Exception as exc:
+        raise RuntimeError(f"Falha ao corrigir solucao na IA. Causa: {exc}") from exc
     return extract_python_code(output)
 
 

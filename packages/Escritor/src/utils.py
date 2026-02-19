@@ -49,7 +49,7 @@ def conectar_gemini() -> AISession:
     return conectar_ia()
 
 
-def gerar_resposta(modelo: AISession, prompt: str) -> str | None:
+def gerar_resposta(modelo: AISession, prompt: str) -> str:
     try:
         print(f"Enviando prompt para IA ({modelo.provider})...")
         if modelo.provider == "gemini":
@@ -64,14 +64,12 @@ def gerar_resposta(modelo: AISession, prompt: str) -> str | None:
             texto = _gerar_resposta_openai(modelo, prompt)
 
         if not texto:
-            print("Resposta vazia da IA.")
-            return None
+            raise RuntimeError(f"Resposta vazia da IA ({modelo.provider}).")
 
         print("Resposta recebida da IA.")
         return texto
     except Exception as exc:
-        print(f"Falha ao gerar resposta na IA ({modelo.provider}): {exc}")
-        return None
+        raise RuntimeError(f"Falha ao gerar resposta na IA ({modelo.provider}): {exc}") from exc
 
 
 def listar_modelos() -> List[str]:
