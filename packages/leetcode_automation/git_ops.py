@@ -5,6 +5,8 @@ import re
 import shlex
 import subprocess
 import tempfile
+import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 from .types import GitPublishResult
@@ -18,9 +20,12 @@ def publish_to_github(
     repo_ssh_url: str,
     default_branch: str,
     solutions_dir: str,
+    problem_frontend_id: str,
+    problem_slug: str,
+    problem_title: str,
+    problem_difficulty: str,
     filename: str,
     solution_code: str,
-    tests_code: str,
     commit_author_name: str,
     commit_author_email: str,
     ssh_private_key: str,
@@ -31,9 +36,9 @@ def publish_to_github(
         raise RuntimeError("Chave SSH vazia para publicacao no GitHub.")
 
     branch = (default_branch or "main").strip()
-    base_dir = (solutions_dir or "leetcode/python").strip().strip("/")
-    solution_rel_path = f"{base_dir}/{filename}" if base_dir else filename
-    tests_rel_path = f"{base_dir}/tests/{filename.replace('.py', '_test.py')}" if base_dir else f"tests/{filename.replace('.py', '_test.py')}"
+    base_dir = (solutions_dir or "problems").strip().strip("/")
+    difficulty_dir = _normalize_difficulty(problem_difficulty)
+    solution_rel_path = f"{base_dir}/{difficulty_dir}/{filename}" if base_dir else f"{difficulty_dir}/{filename}"
 
     tmp_base_path = Path(tmp_root)
     tmp_base_path.mkdir(parents=True, exist_ok=True)
@@ -82,16 +87,27 @@ def publish_to_github(
             _clone_repo(repo_ssh_url=repo_ssh_url, branch=branch, repo_path=repo_path, env=git_env)
 
             solution_path = repo_path / solution_rel_path
-            tests_path = repo_path / tests_rel_path
             solution_path.parent.mkdir(parents=True, exist_ok=True)
-            tests_path.parent.mkdir(parents=True, exist_ok=True)
             solution_path.write_text(solution_code, encoding="utf-8")
-            tests_path.write_text(tests_code, encoding="utf-8")
+            _update_solved_metadata(
+                repo_path=repo_path,
+                repo_ssh_url=repo_ssh_url,
+                problem_frontend_id=problem_frontend_id,
+                problem_slug=problem_slug,
+                problem_title=problem_title,
+                problem_difficulty=difficulty_dir,
+                solution_rel_path=solution_rel_path,
+            )
+            _update_readme_index(repo_path=repo_path)
 
             _run_command(["git", "config", "user.name", commit_author_name], cwd=repo_path, env=git_env)
             _run_command(["git", "config", "user.email", commit_author_email], cwd=repo_path, env=git_env)
 
-            _run_command(["git", "add", solution_rel_path, tests_rel_path], cwd=repo_path, env=git_env)
+            _run_command(
+                ["git", "add", solution_rel_path, "metadata/solved_problems.json", "README.md"],
+                cwd=repo_path,
+                env=git_env,
+            )
 
             commit_message = f"leetcode: solve #{filename.split('_', 1)[0]} {filename.rsplit('.', 1)[0]}"
             _run_command(["git", "commit", "-m", commit_message], cwd=repo_path, env=git_env)
@@ -103,7 +119,7 @@ def publish_to_github(
                 commit_sha=sha,
                 commit_url=commit_url,
                 solution_path=solution_rel_path,
-                tests_path=tests_rel_path,
+                tests_path=None,
             )
         finally:
             if agent_env:
@@ -214,3 +230,125 @@ def _build_commit_url(repo_ssh_url: str, commit_sha: str) -> str:
     owner = match.group(1)
     repo = match.group(2)
     return f"https://github.com/{owner}/{repo}/commit/{commit_sha}"
+
+
+def _normalize_difficulty(difficulty: str) -> str:
+    normalized = (difficulty or "").strip().lower()
+    if normalized not in {"easy", "medium", "hard"}:
+        return "easy"
+    return normalized
+
+
+def _parse_repository_name(repo_ssh_url: str) -> str:
+    match = re.match(r"^git@github\.com:([^/]+)/([^/]+?)(?:\.git)?$", repo_ssh_url.strip())
+    if not match:
+        return ""
+    return f"{match.group(1)}/{match.group(2)}"
+
+
+def _update_solved_metadata(
+    repo_path: Path,
+    repo_ssh_url: str,
+    problem_frontend_id: str,
+    problem_slug: str,
+    problem_title: str,
+    problem_difficulty: str,
+    solution_rel_path: str,
+) -> None:
+    metadata_dir = repo_path / "metadata"
+    metadata_dir.mkdir(parents=True, exist_ok=True)
+    metadata_path = metadata_dir / "solved_problems.json"
+
+    if metadata_path.exists():
+        try:
+            payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            payload = {}
+    else:
+        payload = {}
+
+    items = payload.get("items")
+    if not isinstance(items, list):
+        items = []
+
+    problem_id = str(problem_frontend_id).strip()
+    items = [
+        item for item in items
+        if not (
+            str(item.get("frontend_id", "")).strip() == problem_id
+            or str(item.get("slug", "")).strip() == problem_slug
+        )
+    ]
+
+    now = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    items.append(
+        {
+            "frontend_id": problem_id,
+            "slug": problem_slug,
+            "title": problem_title,
+            "difficulty": problem_difficulty,
+            "path": solution_rel_path,
+            "committed_at": now,
+            "source": "autofeedr",
+        }
+    )
+
+    items.sort(key=lambda item: (item.get("difficulty", ""), item.get("frontend_id", ""), item.get("slug", "")))
+    payload = {
+        "repository": _parse_repository_name(repo_ssh_url),
+        "updated_at": now,
+        "items": items,
+    }
+    metadata_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def _update_readme_index(repo_path: Path) -> None:
+    metadata_path = repo_path / "metadata" / "solved_problems.json"
+    if not metadata_path.exists():
+        return
+
+    try:
+        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return
+    items = payload.get("items")
+    if not isinstance(items, list):
+        return
+
+    lines = [
+        "## Solucoes LeetCode",
+        "",
+        "<!-- AUTOFEEDR:START -->",
+    ]
+    if not items:
+        lines.append("- Nenhuma solução registrada ainda.")
+    else:
+        for item in items:
+            frontend_id = str(item.get("frontend_id", "")).strip()
+            slug = str(item.get("slug", "")).strip()
+            title = str(item.get("title", "")).strip()
+            difficulty = str(item.get("difficulty", "")).strip() or "easy"
+            path = str(item.get("path", "")).strip()
+            if not path:
+                continue
+            lines.append(f"- `{frontend_id}` [{title}](./{path}) - `{difficulty}` - `{slug}`")
+    lines.extend(["<!-- AUTOFEEDR:END -->", ""])
+    block = "\n".join(lines)
+
+    readme_path = repo_path / "README.md"
+    if readme_path.exists():
+        current = readme_path.read_text(encoding="utf-8")
+    else:
+        current = "# leetcode-daily-challenges\n\n"
+
+    if "<!-- AUTOFEEDR:START -->" in current and "<!-- AUTOFEEDR:END -->" in current:
+        updated = re.sub(
+            r"<!-- AUTOFEEDR:START -->.*?<!-- AUTOFEEDR:END -->",
+            "<!-- AUTOFEEDR:START -->\n" + "\n".join(lines[3:-1]) + "\n<!-- AUTOFEEDR:END -->",
+            current,
+            flags=re.S,
+        )
+        readme_path.write_text(updated, encoding="utf-8")
+        return
+
+    readme_path.write_text(current.rstrip() + "\n\n" + block, encoding="utf-8")

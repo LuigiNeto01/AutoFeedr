@@ -135,7 +135,7 @@ class GitHubRepository(Base):
     account_id: Mapped[int] = mapped_column(ForeignKey("github_accounts.id"), index=True)
     repo_ssh_url: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     default_branch: Mapped[str] = mapped_column(String(64), default="main")
-    solutions_dir: Mapped[str] = mapped_column(String(255), default="leetcode/python")
+    solutions_dir: Mapped[str] = mapped_column(String(255), default="problems")
     commit_author_name: Mapped[str] = mapped_column(String(120))
     commit_author_email: Mapped[str] = mapped_column(String(255))
     selection_strategy: Mapped[str] = mapped_column(String(32), default="random")

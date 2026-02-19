@@ -46,4 +46,4 @@ class GitPublishResult:
     commit_sha: str
     commit_url: str
     solution_path: str
-    tests_path: str
+    tests_path: str | None

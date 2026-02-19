@@ -44,7 +44,7 @@ class LeetCodePipelineResult:
     problem_difficulty: str
     attempts_used: int
     solution_path: str
-    tests_path: str
+    tests_path: str | None
     commit_sha: str
     commit_url: str
 
@@ -102,9 +102,12 @@ def execute_leetcode_pipeline(payload: LeetCodePipelineInput) -> LeetCodePipelin
         repo_ssh_url=payload.repo_ssh_url,
         default_branch=payload.default_branch,
         solutions_dir=payload.solutions_dir,
+        problem_frontend_id=problem.frontend_id,
+        problem_slug=problem.title_slug,
+        problem_title=problem.title,
+        problem_difficulty=problem.difficulty,
         filename=filename,
         solution_code=solution_code,
-        tests_code=tests_code,
         commit_author_name=payload.commit_author_name,
         commit_author_email=payload.commit_author_email,
         ssh_private_key=payload.ssh_private_key,

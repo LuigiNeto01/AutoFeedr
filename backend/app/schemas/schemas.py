@@ -163,7 +163,7 @@ class GitHubRepositoryCreate(BaseModel):
     account_id: int
     repo_ssh_url: str
     default_branch: str = Field(default="main", min_length=1, max_length=64)
-    solutions_dir: str = Field(default="leetcode/python", min_length=1, max_length=255)
+    solutions_dir: str = Field(default="problems", min_length=1, max_length=255)
     commit_author_name: str = Field(min_length=2, max_length=120)
     commit_author_email: str = Field(min_length=5, max_length=255)
     selection_strategy: str = "random"

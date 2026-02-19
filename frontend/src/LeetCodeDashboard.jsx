@@ -69,7 +69,7 @@ export default function LeetCodeDashboard() {
     account_id: '',
     repo_ssh_url: '',
     default_branch: 'main',
-    solutions_dir: 'leetcode/python',
+    solutions_dir: 'problems',
     commit_author_name: '',
     commit_author_email: '',
     selection_strategy: 'random',

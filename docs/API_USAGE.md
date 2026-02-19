@@ -471,7 +471,7 @@ Body de update aceita:
   "account_id": 1,
   "repo_ssh_url": "git@github.com:owner/leetcode-sandbox.git",
   "default_branch": "main",
-  "solutions_dir": "leetcode/python",
+  "solutions_dir": "problems",
   "commit_author_name": "AutoFeedr Bot",
   "commit_author_email": "bot@example.com",
   "selection_strategy": "random",
