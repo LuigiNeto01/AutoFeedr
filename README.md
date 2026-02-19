@@ -33,7 +33,9 @@ cp .env.example .env
 ```
 
 Campos importantes:
-- `GEMINI_API_KEY`
+- `LLM_PROVIDER` (`openai` ou `gemini`)
+- `OPENAI_MODEL` / `OPENAI_API_KEY` (quando `LLM_PROVIDER=openai`)
+- `GEMINI_MODEL` / `GEMINI_API_KEY` (quando `LLM_PROVIDER=gemini`)
 - `TOKEN_ENCRYPTION_KEY` (Fernet, usado para criptografar tokens LinkedIn no banco)
 - `DATABASE_URL`
 - `CORS_ORIGINS`

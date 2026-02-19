@@ -268,7 +268,7 @@ def _process_job(db: Session, job: Job) -> None:
         prompt_translation=account.prompt_translation,
     )
     if not post_text:
-        raise RuntimeError("Falha ao gerar post com Gemini.")
+        raise RuntimeError("Falha ao gerar post com IA.")
 
     posted = postar_no_linkedin(token, _normalize_urn(account.urn), post_text)
     if not posted:

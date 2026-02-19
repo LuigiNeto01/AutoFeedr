@@ -8,7 +8,7 @@ from .llm import (
     fix_solution_code,
     generate_solution_code,
     generate_tests_code,
-    get_gemini_session,
+    get_llm_session,
 )
 from .provider import LeetCodeProvider
 from .tester import run_solution_tests
@@ -63,7 +63,7 @@ def execute_leetcode_pipeline(payload: LeetCodePipelineInput) -> LeetCodePipelin
         forced_problem_slug=payload.forced_problem_slug,
     )
 
-    session = get_gemini_session()
+    session = get_llm_session()
     solution_code = generate_solution_code(session, problem)
     tests_code = generate_tests_code(session, problem, solution_code)
 

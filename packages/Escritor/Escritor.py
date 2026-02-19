@@ -1,6 +1,6 @@
 from typing import Optional
 from .src.prompt import PROMPT_GERACAO_POST, PROMPT_TRADUCAO
-from .src.utils import conectar_gemini, gerar_resposta
+from .src.utils import conectar_ia, gerar_resposta
 
 MAX_SECTION_CHARS = 1400
 MAX_LINKEDIN_POST_CHARS = 3000
@@ -36,8 +36,8 @@ def gerar_post(
     prompt_translation: str | None = None,
 ) -> Optional[str]:
 
-    print("Conectando ao Gemini...")
-    modelo = conectar_gemini()
+    print("Conectando ao provedor de IA...")
+    modelo = conectar_ia()
 
     # Gera o post em portugues a partir do prompt base.
     prompt_template_pt = prompt_generation or PROMPT_GERACAO_POST

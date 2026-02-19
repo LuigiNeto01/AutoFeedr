@@ -3,17 +3,17 @@ from __future__ import annotations
 import json
 import re
 
-from packages.Escritor.src.utils import GeminiSession, conectar_gemini, gerar_resposta
+from packages.Escritor.src.utils import AISession, conectar_ia, gerar_resposta
 
 from .prompts import PROMPT_FIX_SOLUTION, PROMPT_GENERATE_SOLUTION, PROMPT_GENERATE_TESTS
 from .types import LeetCodeProblemDetail
 
 
-def get_gemini_session() -> GeminiSession:
-    return conectar_gemini()
+def get_llm_session() -> AISession:
+    return conectar_ia()
 
 
-def generate_solution_code(session: GeminiSession, problem: LeetCodeProblemDetail) -> str:
+def generate_solution_code(session: AISession, problem: LeetCodeProblemDetail) -> str:
     prompt = PROMPT_GENERATE_SOLUTION.format(
         frontend_id=problem.frontend_id,
         title=problem.title,
@@ -26,11 +26,11 @@ def generate_solution_code(session: GeminiSession, problem: LeetCodeProblemDetai
     )
     output = gerar_resposta(session, prompt)
     if not output:
-        raise RuntimeError("Falha ao gerar solucao Python no Gemini.")
+        raise RuntimeError("Falha ao gerar solucao Python na IA.")
     return extract_python_code(output)
 
 
-def generate_tests_code(session: GeminiSession, problem: LeetCodeProblemDetail, solution_code: str) -> str:
+def generate_tests_code(session: AISession, problem: LeetCodeProblemDetail, solution_code: str) -> str:
     prompt = PROMPT_GENERATE_TESTS.format(
         frontend_id=problem.frontend_id,
         title=problem.title,
@@ -43,12 +43,12 @@ def generate_tests_code(session: GeminiSession, problem: LeetCodeProblemDetail, 
     )
     output = gerar_resposta(session, prompt)
     if not output:
-        raise RuntimeError("Falha ao gerar testes Python no Gemini.")
+        raise RuntimeError("Falha ao gerar testes Python na IA.")
     return extract_python_code(output)
 
 
 def fix_solution_code(
-    session: GeminiSession,
+    session: AISession,
     problem: LeetCodeProblemDetail,
     solution_code: str,
     tests_code: str,
@@ -65,7 +65,7 @@ def fix_solution_code(
     )
     output = gerar_resposta(session, prompt)
     if not output:
-        raise RuntimeError("Falha ao corrigir solucao no Gemini.")
+        raise RuntimeError("Falha ao corrigir solucao na IA.")
     return extract_python_code(output)
 
 

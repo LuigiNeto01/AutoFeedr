@@ -3,7 +3,7 @@
 ## 1) Intuito do projeto
 O AutoFeedr e uma plataforma com dois fluxos principais:
 
-1. LinkedIn: cadastro de contas, agenda recorrente, publicacao imediata e geracao via Gemini.
+1. LinkedIn: cadastro de contas, agenda recorrente, publicacao imediata e geracao via provedor configuravel de IA.
 2. LeetCode -> GitHub: selecao de desafios nao pagos, geracao/correcao de solucao Python, testes e commit automatizado.
 
 ## 2) Arquitetura atual (MVP com base solida)
@@ -83,14 +83,15 @@ Arquivo base: `.env` (modelo em `.env.example`).
 
 Variaveis principais:
 
-1. `GEMINI_API_KEY`
-2. `GEMINI_MODEL`
-3. `TOKEN_ENCRYPTION_KEY`
-4. `DATABASE_URL`
-5. `CORS_ORIGINS`
-6. `DEFAULT_TIMEZONE`
-7. `WORKER_POLL_SECONDS`
-8. `WORKER_MAX_ATTEMPTS`
+1. `LLM_PROVIDER` (`openai` ou `gemini`)
+2. `OPENAI_API_KEY` e `OPENAI_MODEL` (quando `LLM_PROVIDER=openai`)
+3. `GEMINI_API_KEY` e `GEMINI_MODEL` (quando `LLM_PROVIDER=gemini`)
+4. `TOKEN_ENCRYPTION_KEY`
+5. `DATABASE_URL`
+6. `CORS_ORIGINS`
+7. `DEFAULT_TIMEZONE`
+8. `WORKER_POLL_SECONDS`
+9. `WORKER_MAX_ATTEMPTS`
 
 ## 8) Deploy e operacao (ambiente conhecido)
 
@@ -113,7 +114,7 @@ Fluxo usado:
 
 1. Painel ainda sem autenticacao/autorizacao.
 2. Renovacao de token LinkedIn ainda manual.
-3. Dependencia de APIs externas (arXiv, Gemini, LinkedIn).
+3. Dependencia de APIs externas (arXiv, provedor de IA, LinkedIn).
 4. Falhas de rede externas podem aumentar latencia de processamento.
 5. Necessario manter `TOKEN_ENCRYPTION_KEY` estavel para nao invalidar tokens armazenados.
 
