@@ -22,6 +22,11 @@ export interface HealthResponse {
 export interface PromptsDefaults {
   prompt_generation: string
   prompt_translation: string
+  leetcode_solution_prompt?: string
+}
+
+export interface LeetCodePromptSettings {
+  solution_prompt?: string | null
 }
 
 export interface LinkedinAccount {

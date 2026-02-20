@@ -27,6 +27,7 @@ from app.models.models import (
     LinkedinAccount,
     Schedule,
     ScheduleRun,
+    User,
 )
 from packages.Escritor import gerar_post
 from packages.Linkedin.src.postLinkedin import postar_no_linkedin
@@ -368,6 +369,12 @@ def _process_single_leetcode_job(db: Session, job: LeetCodeJob) -> None:
     if not account.ssh_key_encrypted:
         raise RuntimeError("Conta GitHub sem chave SSH cadastrada.")
 
+    user_prompt = None
+    if repository.owner_user_id:
+        owner = db.query(User).filter(User.id == repository.owner_user_id, User.is_active.is_(True)).first()
+        if owner:
+            user_prompt = owner.leetcode_solution_prompt
+
     fernet = build_fernet(settings.token_encryption_key)
     ssh_private_key = decrypt_text(fernet, account.ssh_key_encrypted)
     ssh_passphrase = (
@@ -400,6 +407,7 @@ def _process_single_leetcode_job(db: Session, job: LeetCodeJob) -> None:
         http_timeout_seconds=settings.leetcode_http_timeout_seconds,
         test_timeout_seconds=settings.leetcode_test_timeout_seconds,
         tmp_root=settings.worker_tmp_dir,
+        solution_prompt_template=user_prompt,
     )
 
     result = execute_leetcode_pipeline(payload)

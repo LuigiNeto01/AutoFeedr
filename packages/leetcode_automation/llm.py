@@ -13,8 +13,13 @@ def get_llm_session() -> AISession:
     return conectar_ia()
 
 
-def generate_solution_code(session: AISession, problem: LeetCodeProblemDetail) -> str:
-    prompt = PROMPT_GENERATE_SOLUTION.format(
+def generate_solution_code(
+    session: AISession,
+    problem: LeetCodeProblemDetail,
+    prompt_template: str | None = None,
+) -> str:
+    template = (prompt_template or "").strip() or PROMPT_GENERATE_SOLUTION
+    prompt = template.format(
         frontend_id=problem.frontend_id,
         title=problem.title,
         difficulty=problem.difficulty,

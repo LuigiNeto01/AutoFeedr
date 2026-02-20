@@ -7,6 +7,7 @@ import type {
   LeetCodeCompleted,
   LeetCodeJob,
   LeetCodeJobLog,
+  LeetCodePromptSettings,
   LeetCodeSchedule,
   LinkedinAccount,
   LinkedinJob,
@@ -175,4 +176,10 @@ export const api = {
     const suffix = search.toString() ? `?${search.toString()}` : ''
     return request<LeetCodeCompleted[]>(`/leetcode/completed${suffix}`)
   },
+  leetcodePrompts: () => request<LeetCodePromptSettings>('/leetcode/prompts'),
+  updateLeetcodePrompts: (payload: LeetCodePromptSettings) =>
+    request<LeetCodePromptSettings>('/leetcode/prompts', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
 }

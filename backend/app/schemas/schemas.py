@@ -267,6 +267,14 @@ class LeetCodeRunNowCreate(BaseModel):
         return cleaned or None
 
 
+class LeetCodePromptSettingsOut(BaseModel):
+    solution_prompt: str | None
+
+
+class LeetCodePromptSettingsUpdate(BaseModel):
+    solution_prompt: str | None = None
+
+
 class LeetCodeScheduleCreate(BaseModel):
     repository_id: int
     cron_expr: str | None = Field(default=None, min_length=9, max_length=120)

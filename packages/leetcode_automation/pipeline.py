@@ -34,6 +34,7 @@ class LeetCodePipelineInput:
     http_timeout_seconds: int
     test_timeout_seconds: int
     tmp_root: str
+    solution_prompt_template: str | None = None
 
 
 @dataclass
@@ -64,7 +65,11 @@ def execute_leetcode_pipeline(payload: LeetCodePipelineInput) -> LeetCodePipelin
     )
 
     session = get_llm_session()
-    solution_code = generate_solution_code(session, problem)
+    solution_code = generate_solution_code(
+        session,
+        problem,
+        prompt_template=payload.solution_prompt_template,
+    )
     tests_code = generate_tests_code(session, problem, solution_code)
 
     last_failure = ""

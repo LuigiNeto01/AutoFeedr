@@ -50,7 +50,9 @@ def publish_to_github(
         ssh_path.mkdir(parents=True, exist_ok=True)
 
         key_path = ssh_path / "id_key"
-        key_path.write_text(ssh_private_key, encoding="utf-8")
+        # Some RSA OpenSSH keys fail to load without a trailing newline in this runtime.
+        normalized_private_key = ssh_private_key.strip() + "\n"
+        key_path.write_text(normalized_private_key, encoding="utf-8")
         os.chmod(key_path, 0o600)
 
         known_hosts_path = ssh_path / "known_hosts"

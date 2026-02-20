@@ -41,6 +41,8 @@ from app.schemas.schemas import (
     LeetCodeCompletedOut,
     LeetCodeJobLogOut,
     LeetCodeJobOut,
+    LeetCodePromptSettingsOut,
+    LeetCodePromptSettingsUpdate,
     LeetCodeRunNowCreate,
     LeetCodeScheduleCreate,
     LeetCodeScheduleOut,
@@ -51,6 +53,7 @@ from app.schemas.schemas import (
     ScheduleUpdate,
 )
 from packages.Escritor.src.prompt import PROMPT_GERACAO_POST, PROMPT_TRADUCAO
+from packages.leetcode_automation.prompts import PROMPT_GENERATE_SOLUTION
 
 
 router = APIRouter()
@@ -202,7 +205,25 @@ def default_prompts():
     return {
         "prompt_generation": PROMPT_GERACAO_POST,
         "prompt_translation": PROMPT_TRADUCAO,
+        "leetcode_solution_prompt": PROMPT_GENERATE_SOLUTION,
     }
+
+
+@router.get("/leetcode/prompts", response_model=LeetCodePromptSettingsOut)
+def get_leetcode_prompts(current_user: User = Depends(get_current_user)):
+    return {"solution_prompt": current_user.leetcode_solution_prompt}
+
+
+@router.put("/leetcode/prompts", response_model=LeetCodePromptSettingsOut)
+def update_leetcode_prompts(
+    payload: LeetCodePromptSettingsUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    current_user.leetcode_solution_prompt = payload.solution_prompt
+    db.commit()
+    db.refresh(current_user)
+    return {"solution_prompt": current_user.leetcode_solution_prompt}
 
 
 @router.get("/accounts", response_model=list[AccountOut])
