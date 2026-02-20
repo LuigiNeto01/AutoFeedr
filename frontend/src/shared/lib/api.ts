@@ -104,23 +104,23 @@ export const api = {
   health: () => request<HealthResponse>('/health'),
   prompts: () => request<PromptsDefaults>('/prompts/defaults'),
 
-  linkedinAccounts: () => request<LinkedinAccount[]>('/accounts'),
+  linkedinAccounts: () => request<LinkedinAccount[]>('/linkedin/accounts'),
   createLinkedinAccount: (payload: unknown) =>
-    request<LinkedinAccount>('/accounts', { method: 'POST', body: JSON.stringify(payload) }),
+    request<LinkedinAccount>('/linkedin/accounts', { method: 'POST', body: JSON.stringify(payload) }),
   updateLinkedinAccount: (id: number, payload: unknown) =>
-    request<LinkedinAccount>(`/accounts/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+    request<LinkedinAccount>(`/linkedin/accounts/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteLinkedinAccount: (id: number) =>
-    request<{ ok: boolean }>(`/accounts/${id}`, { method: 'DELETE' }),
+    request<{ ok: boolean }>(`/linkedin/accounts/${id}`, { method: 'DELETE' }),
 
-  linkedinSchedules: () => request<LinkedinSchedule[]>('/schedules'),
+  linkedinSchedules: () => request<LinkedinSchedule[]>('/linkedin/schedules'),
   createLinkedinSchedule: (payload: unknown) =>
-    request<LinkedinSchedule>('/schedules', { method: 'POST', body: JSON.stringify(payload) }),
+    request<LinkedinSchedule>('/linkedin/schedules', { method: 'POST', body: JSON.stringify(payload) }),
   updateLinkedinSchedule: (id: number, payload: unknown) =>
-    request<LinkedinSchedule>(`/schedules/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+    request<LinkedinSchedule>(`/linkedin/schedules/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
 
   runLinkedinNow: (payload: unknown) =>
-    request<LinkedinJob>('/jobs/publish-now', { method: 'POST', body: JSON.stringify(payload) }),
-  linkedinJobs: (limit = 50) => request<LinkedinJob[]>(`/jobs?limit=${limit}`),
+    request<LinkedinJob>('/linkedin/jobs/run-now', { method: 'POST', body: JSON.stringify(payload) }),
+  linkedinJobs: (limit = 50) => request<LinkedinJob[]>(`/linkedin/jobs?limit=${limit}`),
 
   githubAccounts: () => request<GitHubAccount[]>('/github/accounts'),
   createGithubAccount: (payload: unknown) =>

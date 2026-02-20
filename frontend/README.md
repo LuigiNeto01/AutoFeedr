@@ -69,13 +69,13 @@ Sistema:
 
 LinkedIn:
 
-- `GET /accounts`
-- `POST /accounts`
-- `PUT /accounts/{account_id}`
-- `GET /schedules`
-- `POST /schedules`
-- `PUT /schedules/{schedule_id}`
-- `POST /jobs/publish-now`
+- `GET /linkedin/accounts`
+- `POST /linkedin/accounts`
+- `PUT /linkedin/accounts/{account_id}`
+- `GET /linkedin/schedules`
+- `POST /linkedin/schedules`
+- `PUT /linkedin/schedules/{schedule_id}`
+- `POST /linkedin/jobs/run-now`
 - `GET /jobs`
 
 GitHub:

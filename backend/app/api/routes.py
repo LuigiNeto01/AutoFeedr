@@ -245,7 +245,7 @@ def update_leetcode_prompts(
     return {"solution_prompt": current_user.leetcode_solution_prompt}
 
 
-@router.get("/accounts", response_model=list[AccountOut])
+@router.get("/linkedin/accounts", response_model=list[AccountOut])
 def list_accounts(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return (
         db.query(LinkedinAccount)
@@ -255,7 +255,7 @@ def list_accounts(db: Session = Depends(get_db), current_user: User = Depends(ge
     )
 
 
-@router.post("/accounts", response_model=AccountOut)
+@router.post("/linkedin/accounts", response_model=AccountOut)
 def create_account(
     payload: AccountCreate,
     db: Session = Depends(get_db),
@@ -292,7 +292,7 @@ def create_account(
     return account
 
 
-@router.put("/accounts/{account_id}", response_model=AccountOut)
+@router.put("/linkedin/accounts/{account_id}", response_model=AccountOut)
 def update_account(
     account_id: int,
     payload: AccountUpdate,
@@ -324,7 +324,7 @@ def update_account(
     return account
 
 
-@router.delete("/accounts/{account_id}")
+@router.delete("/linkedin/accounts/{account_id}")
 def delete_account(
     account_id: int,
     db: Session = Depends(get_db),
@@ -343,7 +343,7 @@ def delete_account(
     return {"ok": True}
 
 
-@router.get("/schedules", response_model=list[ScheduleOut])
+@router.get("/linkedin/schedules", response_model=list[ScheduleOut])
 def list_schedules(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return (
         db.query(Schedule)
@@ -354,7 +354,7 @@ def list_schedules(db: Session = Depends(get_db), current_user: User = Depends(g
     )
 
 
-@router.post("/schedules", response_model=ScheduleOut)
+@router.post("/linkedin/schedules", response_model=ScheduleOut)
 def create_schedule(
     payload: ScheduleCreate,
     db: Session = Depends(get_db),
@@ -400,7 +400,7 @@ def create_schedule(
     return schedule
 
 
-@router.put("/schedules/{schedule_id}", response_model=ScheduleOut)
+@router.put("/linkedin/schedules/{schedule_id}", response_model=ScheduleOut)
 def update_schedule(
     schedule_id: int,
     payload: ScheduleUpdate,
@@ -451,7 +451,7 @@ def update_schedule(
     return schedule
 
 
-@router.post("/jobs/publish-now", response_model=JobOut)
+@router.post("/linkedin/jobs/run-now", response_model=JobOut)
 def publish_now(
     payload: ManualJobCreate,
     db: Session = Depends(get_db),
@@ -464,6 +464,8 @@ def publish_now(
     )
     if not account:
         raise HTTPException(status_code=404, detail="Conta nao encontrada.")
+    if not account.is_active:
+        raise HTTPException(status_code=422, detail="Conta LinkedIn inativa. Ative a conta antes de publicar.")
 
     if not any([payload.topic, payload.paper_url, payload.paper_text]):
         raise HTTPException(status_code=422, detail="Informe topic, paper_url ou paper_text.")
@@ -484,7 +486,7 @@ def publish_now(
     return job
 
 
-@router.get("/jobs", response_model=list[JobOut])
+@router.get("/linkedin/jobs", response_model=list[JobOut])
 def list_jobs(
     db: Session = Depends(get_db),
     limit: int = 50,
