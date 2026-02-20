@@ -167,6 +167,17 @@ function LinkedinAccountsTab() {
     onError: (error) => toast.showError(error),
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => api.deleteLinkedinAccount(id),
+    onSuccess: () => {
+      toast.showSuccess('Conta LinkedIn excluida.')
+      queryClient.invalidateQueries({ queryKey: ['linkedin-accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['linkedin-schedules'] })
+      queryClient.invalidateQueries({ queryKey: ['linkedin-jobs'] })
+    },
+    onError: (error) => toast.showError(error),
+  })
+
   return (
     <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
       <Card>
@@ -196,6 +207,16 @@ function LinkedinAccountsTab() {
                   />
                   <Button size="sm" variant="outline" onClick={() => setEditing(account)}>
                     Editar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={() => {
+                      if (!window.confirm(`Excluir conta LinkedIn "${account.name}"?`)) return
+                      deleteMutation.mutate(account.id)
+                    }}
+                  >
+                    Excluir
                   </Button>
                 </div>
               </div>
@@ -393,6 +414,19 @@ function GithubAccountsTab() {
     onError: (error) => toast.showError(error),
   })
 
+  const deleteAccountMutation = useMutation({
+    mutationFn: (id: number) => api.deleteGithubAccount(id),
+    onSuccess: () => {
+      toast.showSuccess('Conta GitHub excluida.')
+      queryClient.invalidateQueries({ queryKey: ['github-accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['github-repositories'] })
+      queryClient.invalidateQueries({ queryKey: ['leetcode-jobs'] })
+      queryClient.invalidateQueries({ queryKey: ['leetcode-schedules'] })
+      queryClient.invalidateQueries({ queryKey: ['leetcode-completed'] })
+    },
+    onError: (error) => toast.showError(error),
+  })
+
   const createRepoMutation = useMutation({
     mutationFn: api.createGithubRepository,
     onSuccess: () => {
@@ -429,6 +463,18 @@ function GithubAccountsTab() {
     onError: (error) => toast.showError(error),
   })
 
+  const deleteRepoMutation = useMutation({
+    mutationFn: (id: number) => api.deleteGithubRepository(id),
+    onSuccess: () => {
+      toast.showSuccess('Repositorio GitHub excluido.')
+      queryClient.invalidateQueries({ queryKey: ['github-repositories'] })
+      queryClient.invalidateQueries({ queryKey: ['leetcode-jobs'] })
+      queryClient.invalidateQueries({ queryKey: ['leetcode-schedules'] })
+      queryClient.invalidateQueries({ queryKey: ['leetcode-completed'] })
+    },
+    onError: (error) => toast.showError(error),
+  })
+
   return (
     <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
       <Card>
@@ -458,6 +504,16 @@ function GithubAccountsTab() {
                   />
                   <Button size="sm" variant="outline" onClick={() => setEditing(account)}>
                     Editar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={() => {
+                      if (!window.confirm(`Excluir conta GitHub "${account.name}"?`)) return
+                      deleteAccountMutation.mutate(account.id)
+                    }}
+                  >
+                    Excluir
                   </Button>
                 </div>
               </div>
@@ -543,6 +599,16 @@ function GithubAccountsTab() {
                     />
                     <Button size="sm" variant="outline" onClick={() => setEditingRepo(repository)}>
                       Editar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => {
+                        if (!window.confirm(`Excluir repositorio "${repository.repo_ssh_url}"?`)) return
+                        deleteRepoMutation.mutate(repository.id)
+                      }}
+                    >
+                      Excluir
                     </Button>
                   </div>
                 </div>

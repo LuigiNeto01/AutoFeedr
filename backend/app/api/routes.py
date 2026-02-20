@@ -156,6 +156,17 @@ def update_account(account_id: int, payload: AccountUpdate, db: Session = Depend
     return account
 
 
+@router.delete("/accounts/{account_id}")
+def delete_account(account_id: int, db: Session = Depends(get_db)):
+    account = db.query(LinkedinAccount).filter(LinkedinAccount.id == account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Conta nao encontrada.")
+
+    db.delete(account)
+    db.commit()
+    return {"ok": True}
+
+
 @router.get("/schedules", response_model=list[ScheduleOut])
 def list_schedules(db: Session = Depends(get_db)):
     return db.query(Schedule).order_by(Schedule.id.desc()).all()
@@ -320,6 +331,17 @@ def update_github_account(account_id: int, payload: GitHubAccountUpdate, db: Ses
     return account
 
 
+@router.delete("/github/accounts/{account_id}")
+def delete_github_account(account_id: int, db: Session = Depends(get_db)):
+    account = db.query(GitHubAccount).filter(GitHubAccount.id == account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Conta GitHub nao encontrada.")
+
+    db.delete(account)
+    db.commit()
+    return {"ok": True}
+
+
 @router.get("/github/repositories", response_model=list[GitHubRepositoryOut])
 def list_github_repositories(db: Session = Depends(get_db)):
     return db.query(GitHubRepository).order_by(GitHubRepository.id.desc()).all()
@@ -383,6 +405,17 @@ def update_github_repository(
     db.commit()
     db.refresh(repository)
     return repository
+
+
+@router.delete("/github/repositories/{repository_id}")
+def delete_github_repository(repository_id: int, db: Session = Depends(get_db)):
+    repository = db.query(GitHubRepository).filter(GitHubRepository.id == repository_id).first()
+    if not repository:
+        raise HTTPException(status_code=404, detail="Repositorio GitHub nao encontrado.")
+
+    db.delete(repository)
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/leetcode/jobs/run-now", response_model=LeetCodeJobOut)
