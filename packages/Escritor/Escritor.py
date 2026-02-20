@@ -34,10 +34,11 @@ def gerar_post(
     informacoes: str,
     prompt_generation: str | None = None,
     prompt_translation: str | None = None,
+    openai_api_key: str | None = None,
 ) -> Optional[str]:
 
     print("Conectando ao provedor de IA...")
-    modelo = conectar_ia()
+    modelo = conectar_ia(openai_api_key=openai_api_key)
 
     # Gera o post em portugues a partir do prompt base.
     prompt_template_pt = prompt_generation or PROMPT_GERACAO_POST

@@ -35,6 +35,7 @@ class LeetCodePipelineInput:
     test_timeout_seconds: int
     tmp_root: str
     solution_prompt_template: str | None = None
+    openai_api_key: str | None = None
 
 
 @dataclass
@@ -64,7 +65,7 @@ def execute_leetcode_pipeline(payload: LeetCodePipelineInput) -> LeetCodePipelin
         forced_problem_slug=payload.forced_problem_slug,
     )
 
-    session = get_llm_session()
+    session = get_llm_session(openai_api_key=payload.openai_api_key)
     solution_code = generate_solution_code(
         session,
         problem,

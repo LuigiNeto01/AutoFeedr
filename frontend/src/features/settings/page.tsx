@@ -20,6 +20,10 @@ const leetcodePromptSchema = z.object({
   solution_prompt: z.string().min(20),
 })
 
+const openaiKeySchema = z.object({
+  api_key: z.string().min(20),
+})
+
 export function SettingsPage() {
   const toast = useApiToast()
   const queryClient = useQueryClient()
@@ -36,6 +40,10 @@ export function SettingsPage() {
   const leetcodePromptQuery = useQuery({
     queryKey: ['leetcode-prompts'],
     queryFn: api.leetcodePrompts,
+  })
+  const openaiKeyStatusQuery = useQuery({
+    queryKey: ['openai-key-status'],
+    queryFn: api.openaiKeyStatus,
   })
 
   const form = useForm<z.infer<typeof settingsSchema>>({
@@ -57,6 +65,20 @@ export function SettingsPage() {
     onSuccess: () => {
       toast.showSuccess('Prompt de solução LeetCode atualizado.')
       queryClient.invalidateQueries({ queryKey: ['leetcode-prompts'] })
+    },
+    onError: (error) => toast.showError(error),
+  })
+  const openaiKeyForm = useForm<z.infer<typeof openaiKeySchema>>({
+    resolver: zodResolver(openaiKeySchema),
+    defaultValues: { api_key: '' },
+  })
+  const saveOpenaiKeyMutation = useMutation({
+    mutationFn: (apiKey: string) => api.setOpenaiKey({ api_key: apiKey }),
+    onSuccess: () => {
+      toast.showSuccess('OPENAI_API_KEY salva para seu usuario.')
+      openaiKeyForm.reset({ api_key: '' })
+      queryClient.invalidateQueries({ queryKey: ['openai-key-status'] })
+      queryClient.invalidateQueries({ queryKey: ['auth-me'] })
     },
     onError: (error) => toast.showError(error),
   })
@@ -129,6 +151,37 @@ export function SettingsPage() {
           </div>
         </Card>
       </div>
+
+      <Card className="mt-4">
+        <CardTitle>Chave OpenAI do usuário</CardTitle>
+        <CardDescription className="mb-4">
+          Obrigatória para executar automações com IA. Não há chave padrão global.
+        </CardDescription>
+        <form
+          className="space-y-3"
+          onSubmit={openaiKeyForm.handleSubmit((values) => saveOpenaiKeyMutation.mutate(values.api_key))}
+        >
+          <div className="rounded-xl border border-border/70 bg-panel/70 p-3 text-sm">
+            <p className="text-muted">Status:</p>
+            <p
+              className={
+                openaiKeyStatusQuery.data?.has_openai_api_key ? 'text-success' : 'text-danger'
+              }
+            >
+              {openaiKeyStatusQuery.data?.has_openai_api_key
+                ? 'Chave cadastrada'
+                : 'Chave não cadastrada'}
+            </p>
+          </div>
+          <div>
+            <Label htmlFor="cfg-openai-key">Nova OPENAI_API_KEY</Label>
+            <Input id="cfg-openai-key" type="password" {...openaiKeyForm.register('api_key')} />
+          </div>
+          <Button disabled={saveOpenaiKeyMutation.isPending} type="submit">
+            {saveOpenaiKeyMutation.isPending ? 'Salvando...' : 'Salvar chave OpenAI'}
+          </Button>
+        </form>
+      </Card>
 
       <Card className="mt-4">
         <CardTitle>Prompt de solução LeetCode</CardTitle>

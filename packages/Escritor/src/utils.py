@@ -21,7 +21,7 @@ class AISession:
     openai_base_url: str | None = None
 
 
-def conectar_ia() -> AISession:
+def conectar_ia(openai_api_key: str | None = None) -> AISession:
     config = load_ai_config()
 
     if config.provider == "gemini":
@@ -32,14 +32,15 @@ def conectar_ia() -> AISession:
         print(f"Modelo selecionado: {config.model}")
         return AISession(provider="gemini", model=config.model, gemini_client=client)
 
-    if not config.openai_api_key:
-        raise ValueError("OPENAI_API_KEY nao configurada no ambiente.")
+    api_key = (openai_api_key or "").strip()
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY do usuario nao configurada.")
     print("Configurando cliente IA (OpenAI)...")
     print(f"Modelo selecionado: {config.model}")
     return AISession(
         provider="openai",
         model=config.model,
-        openai_api_key=config.openai_api_key,
+        openai_api_key=api_key,
         openai_base_url=config.openai_base_url,
     )
 

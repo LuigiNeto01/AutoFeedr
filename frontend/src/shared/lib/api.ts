@@ -87,6 +87,12 @@ export const api = {
   login: (payload: { email: string; password: string }) =>
     request<AuthLoginResponse>('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
   me: () => request<AuthUser>('/auth/me'),
+  openaiKeyStatus: () => request<{ has_openai_api_key: boolean }>('/auth/openai-key'),
+  setOpenaiKey: (payload: { api_key: string }) =>
+    request<{ ok: boolean; has_openai_api_key: boolean }>('/auth/openai-key', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
   logout: async () => {
     try {
       await request<{ ok: boolean }>('/auth/logout', { method: 'POST' })

@@ -5,6 +5,7 @@ export interface AuthUser {
   id: number
   email: string
   is_active: boolean
+  has_openai_api_key: boolean
   created_at: string
 }
 

@@ -9,8 +9,8 @@ from .prompts import PROMPT_FIX_SOLUTION, PROMPT_GENERATE_SOLUTION, PROMPT_GENER
 from .types import LeetCodeProblemDetail
 
 
-def get_llm_session() -> AISession:
-    return conectar_ia()
+def get_llm_session(openai_api_key: str | None = None) -> AISession:
+    return conectar_ia(openai_api_key=openai_api_key)
 
 
 def generate_solution_code(

@@ -260,6 +260,13 @@ def _process_job(db: Session, job: Job) -> None:
     account = db.query(LinkedinAccount).filter(LinkedinAccount.id == job.account_id).first()
     if not account or not account.is_active:
         raise RuntimeError("Conta LinkedIn inexistente ou inativa.")
+    if not account.owner_user_id:
+        raise RuntimeError("Conta LinkedIn sem usuario dono. Recadastre a conta.")
+
+    owner = db.query(User).filter(User.id == account.owner_user_id, User.is_active.is_(True)).first()
+    if not owner or not owner.openai_api_key_encrypted:
+        raise RuntimeError("Usuario sem OPENAI_API_KEY cadastrada na aplicacao.")
+    user_openai_api_key = decrypt_text(fernet, owner.openai_api_key_encrypted)
 
     token = decrypt_text(fernet, account.token_encrypted)
     content_input = _build_content_input(job)
@@ -267,6 +274,7 @@ def _process_job(db: Session, job: Job) -> None:
         content_input,
         prompt_generation=account.prompt_generation,
         prompt_translation=account.prompt_translation,
+        openai_api_key=user_openai_api_key,
     )
     if not post_text:
         raise RuntimeError("Falha ao gerar post com IA.")
@@ -370,10 +378,15 @@ def _process_single_leetcode_job(db: Session, job: LeetCodeJob) -> None:
         raise RuntimeError("Conta GitHub sem chave SSH cadastrada.")
 
     user_prompt = None
+    user_openai_api_key = None
     if repository.owner_user_id:
         owner = db.query(User).filter(User.id == repository.owner_user_id, User.is_active.is_(True)).first()
         if owner:
             user_prompt = owner.leetcode_solution_prompt
+            if owner.openai_api_key_encrypted:
+                user_openai_api_key = decrypt_text(fernet, owner.openai_api_key_encrypted)
+    if not user_openai_api_key:
+        raise RuntimeError("Usuario sem OPENAI_API_KEY cadastrada na aplicacao.")
 
     fernet = build_fernet(settings.token_encryption_key)
     ssh_private_key = decrypt_text(fernet, account.ssh_key_encrypted)
@@ -408,6 +421,7 @@ def _process_single_leetcode_job(db: Session, job: LeetCodeJob) -> None:
         test_timeout_seconds=settings.leetcode_test_timeout_seconds,
         tmp_root=settings.worker_tmp_dir,
         solution_prompt_template=user_prompt,
+        openai_api_key=user_openai_api_key,
     )
 
     result = execute_leetcode_pipeline(payload)

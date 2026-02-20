@@ -24,8 +24,13 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     leetcode_solution_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    openai_api_key_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    @property
+    def has_openai_api_key(self) -> bool:
+        return bool((self.openai_api_key_encrypted or "").strip())
 
 
 class AuthToken(Base):

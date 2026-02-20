@@ -23,6 +23,7 @@ class AuthUserOut(BaseModel):
     id: int
     email: str
     is_active: bool
+    has_openai_api_key: bool
     created_at: datetime
 
     class Config:
@@ -33,6 +34,10 @@ class AuthTokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: AuthUserOut
+
+
+class OpenAIKeyUpdate(BaseModel):
+    api_key: str = Field(min_length=20, max_length=500)
 
 
 class AccountCreate(BaseModel):

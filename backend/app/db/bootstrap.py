@@ -36,3 +36,4 @@ def ensure_schema() -> None:
     _add_column_if_missing("github_accounts", "owner_user_id INTEGER", "owner_user_id")
     _add_column_if_missing("github_repositories", "owner_user_id INTEGER", "owner_user_id")
     _add_column_if_missing("users", "leetcode_solution_prompt TEXT", "leetcode_solution_prompt")
+    _add_column_if_missing("users", "openai_api_key_encrypted TEXT", "openai_api_key_encrypted")

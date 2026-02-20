@@ -48,6 +48,7 @@ from app.schemas.schemas import (
     LeetCodeScheduleOut,
     LeetCodeScheduleUpdate,
     ManualJobCreate,
+    OpenAIKeyUpdate,
     ScheduleCreate,
     ScheduleOut,
     ScheduleUpdate,
@@ -198,6 +199,24 @@ def auth_logout(
 @router.get("/auth/me", response_model=AuthUserOut)
 def auth_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.get("/auth/openai-key")
+def auth_openai_key_status(current_user: User = Depends(get_current_user)):
+    return {"has_openai_api_key": current_user.has_openai_api_key}
+
+
+@router.put("/auth/openai-key")
+def auth_set_openai_key(
+    payload: OpenAIKeyUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    fernet = _fernet_or_500()
+    current_user.openai_api_key_encrypted = encrypt_text(fernet, payload.api_key.strip())
+    db.commit()
+    db.refresh(current_user)
+    return {"ok": True, "has_openai_api_key": current_user.has_openai_api_key}
 
 
 @router.get("/prompts/defaults")
