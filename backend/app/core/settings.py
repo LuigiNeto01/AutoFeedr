@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     worker_max_attempts: int = 3
     leetcode_graphql_url: str = "https://leetcode.com/graphql"
     leetcode_http_timeout_seconds: int = 20
-    leetcode_default_max_attempts: int = 5
+    leetcode_default_max_attempts: int = 2
     leetcode_test_timeout_seconds: int = 20
     leetcode_retry_base_minutes: int = 2
     worker_tmp_dir: str = "/tmp/autofeedr"

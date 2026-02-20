@@ -56,7 +56,7 @@ Campos importantes:
 2. Cadastrar repositorio alvo (branch, autor de commit, estrategia).
 3. Criar agenda LeetCode ou disparar job imediato.
 4. Worker seleciona problema nao pago e ainda nao resolvido.
-5. Pipeline gera solucao Python, executa testes e corrige ate 5 tentativas.
+5. Pipeline gera solucao Python, executa testes e corrige ate 2 tentativas (padrao).
 6. Em sucesso, commita/pusha no GitHub e registra deduplicacao por problema.
 
 ## Documentacao

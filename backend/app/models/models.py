@@ -202,7 +202,7 @@ class LeetCodeSchedule(Base):
     timezone: Mapped[str] = mapped_column(String(64), default="America/Sao_Paulo")
     selection_strategy: Mapped[str | None] = mapped_column(String(32), nullable=True)
     difficulty_policy: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    max_attempts: Mapped[int] = mapped_column(Integer, default=5)
+    max_attempts: Mapped[int] = mapped_column(Integer, default=2)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -232,7 +232,7 @@ class LeetCodeJob(Base):
     source: Mapped[str] = mapped_column(String(32), default="manual")
     status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
-    max_attempts: Mapped[int] = mapped_column(Integer, default=5)
+    max_attempts: Mapped[int] = mapped_column(Integer, default=2)
 
     selection_strategy: Mapped[str | None] = mapped_column(String(32), nullable=True)
     difficulty_policy: Mapped[str | None] = mapped_column(String(32), nullable=True)

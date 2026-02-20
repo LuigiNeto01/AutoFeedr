@@ -283,7 +283,7 @@ class LeetCodeScheduleCreate(BaseModel):
     timezone: str = "America/Sao_Paulo"
     selection_strategy: str | None = None
     difficulty_policy: str | None = None
-    max_attempts: int = Field(default=5, ge=1, le=10)
+    max_attempts: int = Field(default=2, ge=1, le=10)
     is_active: bool = True
 
 

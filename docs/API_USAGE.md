@@ -495,7 +495,7 @@ Endpoints relacionados:
   "selection_strategy": "random",
   "difficulty_policy": "free_any",
   "problem_slug": null,
-  "max_attempts": 5
+  "max_attempts": 2
 }
 ```
 
@@ -536,7 +536,7 @@ Body de criacao:
   "timezone": "America/Sao_Paulo",
   "selection_strategy": "random",
   "difficulty_policy": "free_any",
-  "max_attempts": 5,
+  "max_attempts": 2,
   "is_active": true
 }
 ```
