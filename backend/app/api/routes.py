@@ -2,13 +2,16 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.auth import create_access_token, hash_password, hash_token, token_expires_at, verify_password
 from app.core.security import build_fernet, encrypt_text
 from app.core.settings import settings
 from app.db.session import get_db
 from app.models.models import (
+    AuthToken,
     GitHubAccount,
     GitHubRepository,
     Job,
@@ -18,11 +21,16 @@ from app.models.models import (
     LeetCodeSchedule,
     LinkedinAccount,
     Schedule,
+    User,
 )
 from app.schemas.schemas import (
     AccountCreate,
     AccountOut,
     AccountUpdate,
+    AuthLogin,
+    AuthRegister,
+    AuthTokenOut,
+    AuthUserOut,
     GitHubAccountCreate,
     GitHubAccountOut,
     GitHubAccountUpdate,
@@ -94,9 +102,99 @@ def _normalize_difficulty_policy(value: str | None) -> str | None:
     return normalized
 
 
+def _extract_bearer_token(authorization: str | None) -> str:
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Token de acesso ausente.")
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        raise HTTPException(status_code=401, detail="Cabecalho Authorization invalido.")
+    return token.strip()
+
+
+def get_current_user(
+    db: Session = Depends(get_db),
+    authorization: str | None = Header(default=None),
+) -> User:
+    token_value = _extract_bearer_token(authorization)
+    token = (
+        db.query(AuthToken)
+        .filter(
+            AuthToken.token_hash == hash_token(token_value),
+            AuthToken.revoked.is_(False),
+            AuthToken.expires_at > datetime.now(UTC).replace(tzinfo=None),
+        )
+        .first()
+    )
+    if not token:
+        raise HTTPException(status_code=401, detail="Token invalido ou expirado.")
+
+    user = db.query(User).filter(User.id == token.user_id, User.is_active.is_(True)).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuario invalido ou inativo.")
+
+    token.last_used_at = datetime.now(UTC).replace(tzinfo=None)
+    db.commit()
+    return user
+
+
+def _build_auth_response(db: Session, user: User) -> AuthTokenOut:
+    raw_token = create_access_token()
+    token = AuthToken(
+        user_id=user.id,
+        token_hash=hash_token(raw_token),
+        expires_at=token_expires_at(settings.auth_token_ttl_hours),
+        revoked=False,
+    )
+    db.add(token)
+    db.commit()
+    db.refresh(user)
+    return AuthTokenOut(access_token=raw_token, user=AuthUserOut.model_validate(user))
+
+
 @router.get("/health")
 def healthcheck():
     return {"status": "ok", "service": "autofeedr-api"}
+
+
+@router.post("/auth/register", response_model=AuthTokenOut)
+def auth_register(payload: AuthRegister, db: Session = Depends(get_db)):
+    email = payload.email.strip().lower()
+    existing = db.query(User).filter(User.email == email).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Usuario com esse email ja existe.")
+
+    user = User(email=email, password_hash=hash_password(payload.password), is_active=True)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return _build_auth_response(db, user)
+
+
+@router.post("/auth/login", response_model=AuthTokenOut)
+def auth_login(payload: AuthLogin, db: Session = Depends(get_db)):
+    email = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == email, User.is_active.is_(True)).first()
+    if not user or not verify_password(payload.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Credenciais invalidas.")
+    return _build_auth_response(db, user)
+
+
+@router.post("/auth/logout")
+def auth_logout(
+    db: Session = Depends(get_db),
+    authorization: str | None = Header(default=None),
+):
+    token_value = _extract_bearer_token(authorization)
+    token = db.query(AuthToken).filter(AuthToken.token_hash == hash_token(token_value)).first()
+    if token:
+        token.revoked = True
+        db.commit()
+    return {"ok": True}
+
+
+@router.get("/auth/me", response_model=AuthUserOut)
+def auth_me(current_user: User = Depends(get_current_user)):
+    return current_user
 
 
 @router.get("/prompts/defaults")
@@ -108,18 +206,35 @@ def default_prompts():
 
 
 @router.get("/accounts", response_model=list[AccountOut])
-def list_accounts(db: Session = Depends(get_db)):
-    return db.query(LinkedinAccount).order_by(LinkedinAccount.id.desc()).all()
+def list_accounts(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return (
+        db.query(LinkedinAccount)
+        .filter(LinkedinAccount.owner_user_id == current_user.id)
+        .order_by(LinkedinAccount.id.desc())
+        .all()
+    )
 
 
 @router.post("/accounts", response_model=AccountOut)
-def create_account(payload: AccountCreate, db: Session = Depends(get_db)):
-    existing = db.query(LinkedinAccount).filter(LinkedinAccount.name == payload.name).first()
+def create_account(
+    payload: AccountCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    existing = (
+        db.query(LinkedinAccount)
+        .filter(
+            LinkedinAccount.owner_user_id == current_user.id,
+            LinkedinAccount.name == payload.name,
+        )
+        .first()
+    )
     if existing:
         raise HTTPException(status_code=409, detail="Conta com esse nome ja existe.")
 
     fernet = _fernet_or_500()
     account = LinkedinAccount(
+        owner_user_id=current_user.id,
         name=payload.name,
         token_encrypted=encrypt_text(fernet, payload.token),
         urn=payload.urn,
@@ -128,14 +243,27 @@ def create_account(payload: AccountCreate, db: Session = Depends(get_db)):
         is_active=payload.is_active,
     )
     db.add(account)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Conflito ao criar conta LinkedIn.") from exc
     db.refresh(account)
     return account
 
 
 @router.put("/accounts/{account_id}", response_model=AccountOut)
-def update_account(account_id: int, payload: AccountUpdate, db: Session = Depends(get_db)):
-    account = db.query(LinkedinAccount).filter(LinkedinAccount.id == account_id).first()
+def update_account(
+    account_id: int,
+    payload: AccountUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    account = (
+        db.query(LinkedinAccount)
+        .filter(LinkedinAccount.id == account_id, LinkedinAccount.owner_user_id == current_user.id)
+        .first()
+    )
     if not account:
         raise HTTPException(status_code=404, detail="Conta nao encontrada.")
 
@@ -157,8 +285,16 @@ def update_account(account_id: int, payload: AccountUpdate, db: Session = Depend
 
 
 @router.delete("/accounts/{account_id}")
-def delete_account(account_id: int, db: Session = Depends(get_db)):
-    account = db.query(LinkedinAccount).filter(LinkedinAccount.id == account_id).first()
+def delete_account(
+    account_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    account = (
+        db.query(LinkedinAccount)
+        .filter(LinkedinAccount.id == account_id, LinkedinAccount.owner_user_id == current_user.id)
+        .first()
+    )
     if not account:
         raise HTTPException(status_code=404, detail="Conta nao encontrada.")
 
@@ -168,13 +304,27 @@ def delete_account(account_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/schedules", response_model=list[ScheduleOut])
-def list_schedules(db: Session = Depends(get_db)):
-    return db.query(Schedule).order_by(Schedule.id.desc()).all()
+def list_schedules(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return (
+        db.query(Schedule)
+        .join(LinkedinAccount, LinkedinAccount.id == Schedule.account_id)
+        .filter(LinkedinAccount.owner_user_id == current_user.id)
+        .order_by(Schedule.id.desc())
+        .all()
+    )
 
 
 @router.post("/schedules", response_model=ScheduleOut)
-def create_schedule(payload: ScheduleCreate, db: Session = Depends(get_db)):
-    account = db.query(LinkedinAccount).filter(LinkedinAccount.id == payload.account_id).first()
+def create_schedule(
+    payload: ScheduleCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    account = (
+        db.query(LinkedinAccount)
+        .filter(LinkedinAccount.id == payload.account_id, LinkedinAccount.owner_user_id == current_user.id)
+        .first()
+    )
     if not account:
         raise HTTPException(status_code=404, detail="Conta nao encontrada.")
 
@@ -211,8 +361,18 @@ def create_schedule(payload: ScheduleCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/schedules/{schedule_id}", response_model=ScheduleOut)
-def update_schedule(schedule_id: int, payload: ScheduleUpdate, db: Session = Depends(get_db)):
-    schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
+def update_schedule(
+    schedule_id: int,
+    payload: ScheduleUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    schedule = (
+        db.query(Schedule)
+        .join(LinkedinAccount, LinkedinAccount.id == Schedule.account_id)
+        .filter(Schedule.id == schedule_id, LinkedinAccount.owner_user_id == current_user.id)
+        .first()
+    )
     if not schedule:
         raise HTTPException(status_code=404, detail="Agenda nao encontrada.")
 
@@ -252,8 +412,16 @@ def update_schedule(schedule_id: int, payload: ScheduleUpdate, db: Session = Dep
 
 
 @router.post("/jobs/publish-now", response_model=JobOut)
-def publish_now(payload: ManualJobCreate, db: Session = Depends(get_db)):
-    account = db.query(LinkedinAccount).filter(LinkedinAccount.id == payload.account_id).first()
+def publish_now(
+    payload: ManualJobCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    account = (
+        db.query(LinkedinAccount)
+        .filter(LinkedinAccount.id == payload.account_id, LinkedinAccount.owner_user_id == current_user.id)
+        .first()
+    )
     if not account:
         raise HTTPException(status_code=404, detail="Conta nao encontrada.")
 
@@ -277,23 +445,48 @@ def publish_now(payload: ManualJobCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/jobs", response_model=list[JobOut])
-def list_jobs(db: Session = Depends(get_db), limit: int = 50):
-    return db.query(Job).order_by(Job.id.desc()).limit(limit).all()
+def list_jobs(
+    db: Session = Depends(get_db),
+    limit: int = 50,
+    current_user: User = Depends(get_current_user),
+):
+    return (
+        db.query(Job)
+        .join(LinkedinAccount, LinkedinAccount.id == Job.account_id)
+        .filter(LinkedinAccount.owner_user_id == current_user.id)
+        .order_by(Job.id.desc())
+        .limit(limit)
+        .all()
+    )
 
 
 @router.get("/github/accounts", response_model=list[GitHubAccountOut])
-def list_github_accounts(db: Session = Depends(get_db)):
-    return db.query(GitHubAccount).order_by(GitHubAccount.id.desc()).all()
+def list_github_accounts(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return (
+        db.query(GitHubAccount)
+        .filter(GitHubAccount.owner_user_id == current_user.id)
+        .order_by(GitHubAccount.id.desc())
+        .all()
+    )
 
 
 @router.post("/github/accounts", response_model=GitHubAccountOut)
-def create_github_account(payload: GitHubAccountCreate, db: Session = Depends(get_db)):
-    existing = db.query(GitHubAccount).filter(GitHubAccount.name == payload.name).first()
+def create_github_account(
+    payload: GitHubAccountCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    existing = (
+        db.query(GitHubAccount)
+        .filter(GitHubAccount.owner_user_id == current_user.id, GitHubAccount.name == payload.name)
+        .first()
+    )
     if existing:
         raise HTTPException(status_code=409, detail="Conta GitHub com esse nome ja existe.")
 
     fernet = _fernet_or_500()
     account = GitHubAccount(
+        owner_user_id=current_user.id,
         name=payload.name,
         ssh_key_encrypted=encrypt_text(fernet, payload.ssh_private_key),
         ssh_passphrase_encrypted=encrypt_text(fernet, payload.ssh_passphrase)
@@ -302,14 +495,27 @@ def create_github_account(payload: GitHubAccountCreate, db: Session = Depends(ge
         is_active=payload.is_active,
     )
     db.add(account)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Conflito ao criar conta GitHub.") from exc
     db.refresh(account)
     return account
 
 
 @router.put("/github/accounts/{account_id}", response_model=GitHubAccountOut)
-def update_github_account(account_id: int, payload: GitHubAccountUpdate, db: Session = Depends(get_db)):
-    account = db.query(GitHubAccount).filter(GitHubAccount.id == account_id).first()
+def update_github_account(
+    account_id: int,
+    payload: GitHubAccountUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    account = (
+        db.query(GitHubAccount)
+        .filter(GitHubAccount.id == account_id, GitHubAccount.owner_user_id == current_user.id)
+        .first()
+    )
     if not account:
         raise HTTPException(status_code=404, detail="Conta GitHub nao encontrada.")
 
@@ -332,8 +538,16 @@ def update_github_account(account_id: int, payload: GitHubAccountUpdate, db: Ses
 
 
 @router.delete("/github/accounts/{account_id}")
-def delete_github_account(account_id: int, db: Session = Depends(get_db)):
-    account = db.query(GitHubAccount).filter(GitHubAccount.id == account_id).first()
+def delete_github_account(
+    account_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    account = (
+        db.query(GitHubAccount)
+        .filter(GitHubAccount.id == account_id, GitHubAccount.owner_user_id == current_user.id)
+        .first()
+    )
     if not account:
         raise HTTPException(status_code=404, detail="Conta GitHub nao encontrada.")
 
@@ -343,17 +557,37 @@ def delete_github_account(account_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/github/repositories", response_model=list[GitHubRepositoryOut])
-def list_github_repositories(db: Session = Depends(get_db)):
-    return db.query(GitHubRepository).order_by(GitHubRepository.id.desc()).all()
+def list_github_repositories(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return (
+        db.query(GitHubRepository)
+        .filter(GitHubRepository.owner_user_id == current_user.id)
+        .order_by(GitHubRepository.id.desc())
+        .all()
+    )
 
 
 @router.post("/github/repositories", response_model=GitHubRepositoryOut)
-def create_github_repository(payload: GitHubRepositoryCreate, db: Session = Depends(get_db)):
-    account = db.query(GitHubAccount).filter(GitHubAccount.id == payload.account_id).first()
+def create_github_repository(
+    payload: GitHubRepositoryCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    account = (
+        db.query(GitHubAccount)
+        .filter(GitHubAccount.id == payload.account_id, GitHubAccount.owner_user_id == current_user.id)
+        .first()
+    )
     if not account:
         raise HTTPException(status_code=404, detail="Conta GitHub nao encontrada.")
 
-    existing = db.query(GitHubRepository).filter(GitHubRepository.repo_ssh_url == payload.repo_ssh_url).first()
+    existing = (
+        db.query(GitHubRepository)
+        .filter(
+            GitHubRepository.owner_user_id == current_user.id,
+            GitHubRepository.repo_ssh_url == payload.repo_ssh_url,
+        )
+        .first()
+    )
     if existing:
         raise HTTPException(status_code=409, detail="Repositorio GitHub ja cadastrado.")
 
@@ -361,6 +595,7 @@ def create_github_repository(payload: GitHubRepositoryCreate, db: Session = Depe
     difficulty_policy = _normalize_difficulty_policy(payload.difficulty_policy) or "free_any"
 
     repository = GitHubRepository(
+        owner_user_id=current_user.id,
         account_id=payload.account_id,
         repo_ssh_url=payload.repo_ssh_url,
         default_branch=payload.default_branch,
@@ -372,7 +607,11 @@ def create_github_repository(payload: GitHubRepositoryCreate, db: Session = Depe
         is_active=payload.is_active,
     )
     db.add(repository)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Conflito ao criar repositorio GitHub.") from exc
     db.refresh(repository)
     return repository
 
@@ -382,8 +621,13 @@ def update_github_repository(
     repository_id: int,
     payload: GitHubRepositoryUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    repository = db.query(GitHubRepository).filter(GitHubRepository.id == repository_id).first()
+    repository = (
+        db.query(GitHubRepository)
+        .filter(GitHubRepository.id == repository_id, GitHubRepository.owner_user_id == current_user.id)
+        .first()
+    )
     if not repository:
         raise HTTPException(status_code=404, detail="Repositorio GitHub nao encontrado.")
 
@@ -408,8 +652,16 @@ def update_github_repository(
 
 
 @router.delete("/github/repositories/{repository_id}")
-def delete_github_repository(repository_id: int, db: Session = Depends(get_db)):
-    repository = db.query(GitHubRepository).filter(GitHubRepository.id == repository_id).first()
+def delete_github_repository(
+    repository_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    repository = (
+        db.query(GitHubRepository)
+        .filter(GitHubRepository.id == repository_id, GitHubRepository.owner_user_id == current_user.id)
+        .first()
+    )
     if not repository:
         raise HTTPException(status_code=404, detail="Repositorio GitHub nao encontrado.")
 
@@ -419,8 +671,16 @@ def delete_github_repository(repository_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/leetcode/jobs/run-now", response_model=LeetCodeJobOut)
-def leetcode_run_now(payload: LeetCodeRunNowCreate, db: Session = Depends(get_db)):
-    repository = db.query(GitHubRepository).filter(GitHubRepository.id == payload.repository_id).first()
+def leetcode_run_now(
+    payload: LeetCodeRunNowCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    repository = (
+        db.query(GitHubRepository)
+        .filter(GitHubRepository.id == payload.repository_id, GitHubRepository.owner_user_id == current_user.id)
+        .first()
+    )
     if not repository:
         raise HTTPException(status_code=404, detail="Repositorio GitHub nao encontrado.")
 
@@ -449,24 +709,49 @@ def leetcode_run_now(payload: LeetCodeRunNowCreate, db: Session = Depends(get_db
 
 
 @router.get("/leetcode/jobs", response_model=list[LeetCodeJobOut])
-def list_leetcode_jobs(db: Session = Depends(get_db), limit: int = 50, repository_id: int | None = None):
-    query = db.query(LeetCodeJob)
+def list_leetcode_jobs(
+    db: Session = Depends(get_db),
+    limit: int = 50,
+    repository_id: int | None = None,
+    current_user: User = Depends(get_current_user),
+):
+    query = db.query(LeetCodeJob).join(GitHubRepository, GitHubRepository.id == LeetCodeJob.repository_id)
+    query = query.filter(GitHubRepository.owner_user_id == current_user.id)
     if repository_id is not None:
         query = query.filter(LeetCodeJob.repository_id == repository_id)
     return query.order_by(LeetCodeJob.id.desc()).limit(limit).all()
 
 
 @router.get("/leetcode/jobs/{job_id}", response_model=LeetCodeJobOut)
-def get_leetcode_job(job_id: int, db: Session = Depends(get_db)):
-    job = db.query(LeetCodeJob).filter(LeetCodeJob.id == job_id).first()
+def get_leetcode_job(
+    job_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    job = (
+        db.query(LeetCodeJob)
+        .join(GitHubRepository, GitHubRepository.id == LeetCodeJob.repository_id)
+        .filter(LeetCodeJob.id == job_id, GitHubRepository.owner_user_id == current_user.id)
+        .first()
+    )
     if not job:
         raise HTTPException(status_code=404, detail="Job LeetCode nao encontrado.")
     return job
 
 
 @router.get("/leetcode/jobs/{job_id}/logs", response_model=list[LeetCodeJobLogOut])
-def list_leetcode_job_logs(job_id: int, db: Session = Depends(get_db), limit: int = 100):
-    job = db.query(LeetCodeJob).filter(LeetCodeJob.id == job_id).first()
+def list_leetcode_job_logs(
+    job_id: int,
+    db: Session = Depends(get_db),
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+):
+    job = (
+        db.query(LeetCodeJob)
+        .join(GitHubRepository, GitHubRepository.id == LeetCodeJob.repository_id)
+        .filter(LeetCodeJob.id == job_id, GitHubRepository.owner_user_id == current_user.id)
+        .first()
+    )
     if not job:
         raise HTTPException(status_code=404, detail="Job LeetCode nao encontrado.")
 
@@ -480,13 +765,27 @@ def list_leetcode_job_logs(job_id: int, db: Session = Depends(get_db), limit: in
 
 
 @router.get("/leetcode/schedules", response_model=list[LeetCodeScheduleOut])
-def list_leetcode_schedules(db: Session = Depends(get_db)):
-    return db.query(LeetCodeSchedule).order_by(LeetCodeSchedule.id.desc()).all()
+def list_leetcode_schedules(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return (
+        db.query(LeetCodeSchedule)
+        .join(GitHubRepository, GitHubRepository.id == LeetCodeSchedule.repository_id)
+        .filter(GitHubRepository.owner_user_id == current_user.id)
+        .order_by(LeetCodeSchedule.id.desc())
+        .all()
+    )
 
 
 @router.post("/leetcode/schedules", response_model=LeetCodeScheduleOut)
-def create_leetcode_schedule(payload: LeetCodeScheduleCreate, db: Session = Depends(get_db)):
-    repository = db.query(GitHubRepository).filter(GitHubRepository.id == payload.repository_id).first()
+def create_leetcode_schedule(
+    payload: LeetCodeScheduleCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    repository = (
+        db.query(GitHubRepository)
+        .filter(GitHubRepository.id == payload.repository_id, GitHubRepository.owner_user_id == current_user.id)
+        .first()
+    )
     if not repository:
         raise HTTPException(status_code=404, detail="Repositorio GitHub nao encontrado.")
 
@@ -524,8 +823,14 @@ def update_leetcode_schedule(
     schedule_id: int,
     payload: LeetCodeScheduleUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    schedule = db.query(LeetCodeSchedule).filter(LeetCodeSchedule.id == schedule_id).first()
+    schedule = (
+        db.query(LeetCodeSchedule)
+        .join(GitHubRepository, GitHubRepository.id == LeetCodeSchedule.repository_id)
+        .filter(LeetCodeSchedule.id == schedule_id, GitHubRepository.owner_user_id == current_user.id)
+        .first()
+    )
     if not schedule:
         raise HTTPException(status_code=404, detail="Agenda LeetCode nao encontrada.")
 
@@ -562,8 +867,13 @@ def list_leetcode_completed(
     db: Session = Depends(get_db),
     repository_id: int | None = None,
     limit: int = 100,
+    current_user: User = Depends(get_current_user),
 ):
-    query = db.query(LeetCodeCompletedProblem)
+    query = db.query(LeetCodeCompletedProblem).join(
+        GitHubRepository,
+        GitHubRepository.id == LeetCodeCompletedProblem.repository_id,
+    )
+    query = query.filter(GitHubRepository.owner_user_id == current_user.id)
     if repository_id is not None:
         query = query.filter(LeetCodeCompletedProblem.repository_id == repository_id)
     return query.order_by(LeetCodeCompletedProblem.id.desc()).limit(limit).all()

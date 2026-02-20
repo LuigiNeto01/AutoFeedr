@@ -16,6 +16,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 
 import { api } from '@/shared/lib/api'
+import { clearAccessToken } from '@/shared/lib/session'
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
@@ -84,6 +85,11 @@ export function AppShell() {
     refetchInterval: 15_000,
     retry: 1,
   })
+  const meQuery = useQuery({
+    queryKey: ['auth-me'],
+    queryFn: api.me,
+    retry: false,
+  })
 
   return (
     <div className="min-h-screen md:grid md:grid-cols-[18rem_1fr]">
@@ -107,6 +113,17 @@ export function AppShell() {
 
             <Button size="sm" onClick={() => navigate('/executar-agora')}>
               <PlayCircle className="mr-2 h-4 w-4" /> Executar agora
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={async () => {
+                await api.logout()
+                clearAccessToken()
+                navigate('/login', { replace: true })
+              }}
+            >
+              {meQuery.data?.email ?? 'Sair'}
             </Button>
           </div>
         </header>

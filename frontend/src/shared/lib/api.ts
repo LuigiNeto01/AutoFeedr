@@ -1,4 +1,6 @@
 import type {
+  AuthLoginResponse,
+  AuthUser,
   GitHubAccount,
   GitHubRepository,
   HealthResponse,
@@ -11,6 +13,7 @@ import type {
   LinkedinSchedule,
   PromptsDefaults,
 } from '@/entities/types'
+import { clearAccessToken, getAccessToken } from '@/shared/lib/session'
 
 export class ApiError extends Error {
   status: number
@@ -53,9 +56,11 @@ export function setApiBase(base: string) {
 export const API_BASE = resolveApiBase()
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = getAccessToken()
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init?.headers ?? {}),
     },
     ...init,
@@ -76,6 +81,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  register: (payload: { email: string; password: string }) =>
+    request<AuthLoginResponse>('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
+  login: (payload: { email: string; password: string }) =>
+    request<AuthLoginResponse>('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
+  me: () => request<AuthUser>('/auth/me'),
+  logout: async () => {
+    try {
+      await request<{ ok: boolean }>('/auth/logout', { method: 'POST' })
+    } finally {
+      clearAccessToken()
+    }
+  },
+
   health: () => request<HealthResponse>('/health'),
   prompts: () => request<PromptsDefaults>('/prompts/defaults'),
 

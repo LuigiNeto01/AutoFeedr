@@ -16,11 +16,40 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 
-class LinkedinAccount(Base):
-    __tablename__ = "linkedin_accounts"
+class User(Base):
+    __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class AuthToken(Base):
+    __tablename__ = "auth_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    user: Mapped[User] = relationship()
+
+
+class LinkedinAccount(Base):
+    __tablename__ = "linkedin_accounts"
+    __table_args__ = (
+        UniqueConstraint("owner_user_id", "name", name="uq_linkedin_account_owner_name"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    owner_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True, nullable=True)
+    name: Mapped[str] = mapped_column(String(120), index=True)
     token_encrypted: Mapped[str] = mapped_column(Text)
     urn: Mapped[str] = mapped_column(String(255))
     prompt_generation: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -109,9 +138,13 @@ class ScheduleRun(Base):
 
 class GitHubAccount(Base):
     __tablename__ = "github_accounts"
+    __table_args__ = (
+        UniqueConstraint("owner_user_id", "name", name="uq_github_account_owner_name"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    owner_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True, nullable=True)
+    name: Mapped[str] = mapped_column(String(120), index=True)
     ssh_key_encrypted: Mapped[str] = mapped_column(Text)
     ssh_passphrase_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -130,10 +163,14 @@ class GitHubAccount(Base):
 
 class GitHubRepository(Base):
     __tablename__ = "github_repositories"
+    __table_args__ = (
+        UniqueConstraint("owner_user_id", "repo_ssh_url", name="uq_github_repo_owner_url"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    owner_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True, nullable=True)
     account_id: Mapped[int] = mapped_column(ForeignKey("github_accounts.id"), index=True)
-    repo_ssh_url: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    repo_ssh_url: Mapped[str] = mapped_column(String(255), index=True)
     default_branch: Mapped[str] = mapped_column(String(64), default="main")
     solutions_dir: Mapped[str] = mapped_column(String(255), default="problems")
     commit_author_name: Mapped[str] = mapped_column(String(120))

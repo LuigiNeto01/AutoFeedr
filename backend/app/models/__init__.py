@@ -1,4 +1,5 @@
 from .models import (
+    AuthToken,
     GitHubAccount,
     GitHubRepository,
     Job,
@@ -11,6 +12,7 @@ from .models import (
     LinkedinAccount,
     Schedule,
     ScheduleRun,
+    User,
 )
 
 __all__ = [
@@ -19,6 +21,8 @@ __all__ = [
     "Job",
     "JobLog",
     "ScheduleRun",
+    "User",
+    "AuthToken",
     "GitHubAccount",
     "GitHubRepository",
     "LeetCodeSchedule",

@@ -32,3 +32,6 @@ def ensure_schema() -> None:
     _add_column_if_missing("schedules", "cta_type VARCHAR(32)", "cta_type")
     _add_column_if_missing("schedules", "campaign_theme VARCHAR(255)", "campaign_theme")
     _add_column_if_missing("schedules", "use_date_context BOOLEAN DEFAULT TRUE", "use_date_context")
+    _add_column_if_missing("linkedin_accounts", "owner_user_id INTEGER", "owner_user_id")
+    _add_column_if_missing("github_accounts", "owner_user_id INTEGER", "owner_user_id")
+    _add_column_if_missing("github_repositories", "owner_user_id INTEGER", "owner_user_id")

@@ -9,6 +9,32 @@ from pydantic import BaseModel, Field, field_validator
 GITHUB_REPO_SSH_REGEX = re.compile(r"^git@github\.com:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:\.git)?$")
 
 
+class AuthRegister(BaseModel):
+    email: str = Field(min_length=5, max_length=255)
+    password: str = Field(min_length=8, max_length=128)
+
+
+class AuthLogin(BaseModel):
+    email: str = Field(min_length=5, max_length=255)
+    password: str = Field(min_length=8, max_length=128)
+
+
+class AuthUserOut(BaseModel):
+    id: int
+    email: str
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AuthTokenOut(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: AuthUserOut
+
+
 class AccountCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     token: str = Field(min_length=10)

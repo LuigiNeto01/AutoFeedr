@@ -604,7 +604,8 @@ function GithubAccountsTab() {
                       size="sm"
                       variant="danger"
                       onClick={() => {
-                        if (!window.confirm(`Excluir repositorio "${repository.repo_ssh_url}"?`)) return
+                        if (!window.confirm(`Excluir repositorio "${repository.repo_ssh_url}"?`))
+                          return
                         deleteRepoMutation.mutate(repository.id)
                       }}
                     >

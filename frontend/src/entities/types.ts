@@ -1,6 +1,19 @@
 export type JobStatus = 'pending' | 'running' | 'retry' | 'success' | 'failed'
 export type AutomationKind = 'linkedin_post' | 'leetcode_commit'
 
+export interface AuthUser {
+  id: number
+  email: string
+  is_active: boolean
+  created_at: string
+}
+
+export interface AuthLoginResponse {
+  access_token: string
+  token_type: string
+  user: AuthUser
+}
+
 export interface HealthResponse {
   status: string
   service: string

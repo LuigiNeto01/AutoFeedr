@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     leetcode_test_timeout_seconds: int = 20
     leetcode_retry_base_minutes: int = 2
     worker_tmp_dir: str = "/tmp/autofeedr"
+    auth_token_ttl_hours: int = 720
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
