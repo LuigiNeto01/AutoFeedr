@@ -6,7 +6,10 @@ import { Toaster } from 'sonner'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      refetchInterval: 10_000,
+      refetchIntervalInBackground: true,
       staleTime: 20_000,
       retry: 1,
     },

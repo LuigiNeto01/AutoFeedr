@@ -18,7 +18,11 @@ const settingsSchema = z.object({
 
 export function SettingsPage() {
   const toast = useApiToast()
-  const defaultsQuery = useQuery({ queryKey: ['prompts-defaults'], queryFn: api.prompts })
+  const defaultsQuery = useQuery({
+    queryKey: ['prompts-defaults'],
+    queryFn: api.prompts,
+    refetchInterval: false,
+  })
   const healthQuery = useQuery({
     queryKey: ['health'],
     queryFn: api.health,
