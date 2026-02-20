@@ -93,24 +93,54 @@ Variaveis principais:
 8. `WORKER_POLL_SECONDS`
 9. `WORKER_MAX_ATTEMPTS`
 
-## 8) Deploy e operacao (ambiente conhecido)
+## 8) Deploy em producao (eyelid)
 
-Host de execucao informado:
+Ambiente de producao atual:
 
-1. Maquina: `eyelid`
-2. Caminho: `/opt/AutoFeedr`
-3. Orquestracao: `docker compose`
-4. Estrategia adotada: deploy por Git (`develop`) + rebuild de containers
+1. Host: `eyelid`
+2. Path: `/opt/AutoFeedr`
+3. Branch de deploy: `github_develop`
+4. Orquestracao: `docker compose`
 
-Fluxo usado:
+Passo a passo de deploy:
 
-1. `git push origin develop`
-2. `ssh eyelid`
-3. `cd /opt/AutoFeedr`
-4. `git fetch origin develop && git reset --hard origin/develop`
-5. `docker compose up -d --build`
+1. Local:
+   - `git push origin github_develop`
+2. Servidor:
+   - `ssh eyelid`
+   - `cd /opt/AutoFeedr`
+   - `git pull --ff-only origin github_develop`
+   - `docker compose up -d --build backend worker frontend`
+3. Validacao rapida:
+   - `curl http://localhost:8000/health`
+   - `docker compose ps`
 
-## 9) Riscos e pontos de atencao
+Observacoes operacionais:
+
+1. Evitar `git reset --hard` em deploy padrao.
+2. `TOKEN_ENCRYPTION_KEY` precisa permanecer estavel no servidor.
+3. Frontend em producao usa tunel local para acesso remoto:
+   - `ssh -N -L 5173:localhost:5173 -L 8001:localhost:8000 eyelid`
+   - Abrir `http://localhost:5173`
+
+## 9) Diferencas entre ambientes
+
+`local (dev)`:
+
+1. Execucao no workspace local (`docker compose up -d --build`).
+2. API local normalmente em `http://localhost:8000`.
+3. Frontend local normalmente em `http://localhost:5173`.
+4. Pode usar `.env` de desenvolvimento com credenciais de teste.
+
+`producao (eyelid)`:
+
+1. Codigo roda em `/opt/AutoFeedr`.
+2. Acesso geralmente via tunel SSH (`5173` frontend + `8001` API).
+3. `.env` do servidor pode divergir do local (segredos reais).
+4. Qualquer troca de `TOKEN_ENCRYPTION_KEY` invalida segredos criptografados ja salvos.
+5. Limites de quota do provider de IA impactam jobs reais (LinkedIn e LeetCode).
+
+## 10) Riscos e pontos de atencao
 
 1. Painel ainda sem autenticacao/autorizacao.
 2. Renovacao de token LinkedIn ainda manual.
@@ -118,7 +148,7 @@ Fluxo usado:
 4. Falhas de rede externas podem aumentar latencia de processamento.
 5. Necessario manter `TOKEN_ENCRYPTION_KEY` estavel para nao invalidar tokens armazenados.
 
-## 10) Proximos passos naturais
+## 11) Proximos passos naturais
 
 1. Auth para painel/API (mesmo single-user).
 2. Endpoint para excluir agenda/conta com seguranca.
