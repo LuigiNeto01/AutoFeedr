@@ -377,6 +377,7 @@ def _process_single_leetcode_job(db: Session, job: LeetCodeJob) -> None:
     if not account.ssh_key_encrypted:
         raise RuntimeError("Conta GitHub sem chave SSH cadastrada.")
 
+    fernet = build_fernet(settings.token_encryption_key)
     user_prompt = None
     user_openai_api_key = None
     if repository.owner_user_id:
@@ -388,7 +389,6 @@ def _process_single_leetcode_job(db: Session, job: LeetCodeJob) -> None:
     if not user_openai_api_key:
         raise RuntimeError("Usuario sem OPENAI_API_KEY cadastrada na aplicacao.")
 
-    fernet = build_fernet(settings.token_encryption_key)
     ssh_private_key = decrypt_text(fernet, account.ssh_key_encrypted)
     ssh_passphrase = (
         decrypt_text(fernet, account.ssh_passphrase_encrypted)
