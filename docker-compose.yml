@@ -50,7 +50,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend_new
+      context: ./frontend
       dockerfile: Dockerfile
     container_name: autofeedr-frontend
     environment:
