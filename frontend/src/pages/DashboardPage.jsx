@@ -69,7 +69,7 @@ export default function DashboardPage() {
 
   const last24hJobs = useMemo(() => {
     const threshold = Date.now() - 24 * 60 * 60 * 1000;
-    return jobs.filter((job) => new Date(job.createdAt).getTime() >= threshold);
+    return jobs.filter((job) => toTimestamp(job.createdAt) >= threshold);
   }, [jobs]);
 
   const counters = useMemo(() => {
@@ -135,7 +135,7 @@ export default function DashboardPage() {
       <section className={`rounded-3xl border p-5 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
         <div className="mb-4">
           <h3 className={`text-base font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Tendencia de execucoes</h3>
-          <p className={`text-sm ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Blocos de 4 horas com todos os status</p>
+          <p className={`text-sm ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Blocos de 1 hora com todos os status</p>
         </div>
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <LineOverview isDarkMode={isDarkMode} dataset={chartDataset} />
@@ -256,7 +256,7 @@ function statusColor(status) {
 
 function formatTime(value) {
   try {
-    return new Date(value).toLocaleString("pt-BR", {
+    return new Date(toTimestamp(value)).toLocaleString("pt-BR", {
       day: "2-digit",
       month: "2-digit",
       hour: "2-digit",
@@ -268,17 +268,28 @@ function formatTime(value) {
 }
 
 function sortByRecent(a, b) {
-  return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  return toTimestamp(b.createdAt) - toTimestamp(a.createdAt);
 }
 
 function buildChartDataset(jobs) {
-  const now = Date.now();
-  const buckets = Array.from({ length: 12 }, (_, index) => {
-    const start = now - (11 - index) * 2 * 60 * 60 * 1000;
+  const now = new Date();
+  const currentHourStart = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    now.getHours(),
+    0,
+    0,
+    0,
+  ).getTime();
+  const oneHourMs = 60 * 60 * 1000;
+
+  const buckets = Array.from({ length: 24 }, (_, index) => {
+    const start = currentHourStart - (23 - index) * oneHourMs;
     return {
       date: new Date(start),
       start,
-      end: start + 2 * 60 * 60 * 1000,
+      end: start + oneHourMs,
       pending: 0,
       running: 0,
       retry: 0,
@@ -288,7 +299,7 @@ function buildChartDataset(jobs) {
   });
 
   for (const job of jobs) {
-    const createdAt = new Date(job.createdAt).getTime();
+    const createdAt = toTimestamp(job.createdAt);
     const bucket = buckets.find((item) => createdAt >= item.start && createdAt < item.end);
     if (bucket && bucket[job.status] !== undefined) {
       bucket[job.status] += 1;
@@ -302,4 +313,13 @@ function buildChartDataset(jobs) {
     failed: item.failed,
     success: item.success,
   }));
+}
+
+function toTimestamp(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return 0;
+  const hasTimezone = /([zZ]|[+\-]\d{2}:\d{2})$/.test(raw);
+  const normalized = hasTimezone ? raw : `${raw}Z`;
+  const ts = Date.parse(normalized);
+  return Number.isNaN(ts) ? 0 : ts;
 }
