@@ -103,10 +103,19 @@ export const api = {
       return request(`/schedules/${id}`, { method: "PUT", body: JSON.stringify(payload) });
     }
   },
+  deleteLinkedinSchedule: async (id) => {
+    try {
+      return await request(`/linkedin/schedules/${id}`, { method: "DELETE" });
+    } catch {
+      return request(`/schedules/${id}`, { method: "DELETE" });
+    }
+  },
   createLeetcodeSchedule: (payload) =>
     request("/leetcode/schedules", { method: "POST", body: JSON.stringify(payload) }),
   updateLeetcodeSchedule: (id, payload) =>
     request(`/leetcode/schedules/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  deleteLeetcodeSchedule: (id) =>
+    request(`/leetcode/schedules/${id}`, { method: "DELETE" }),
   runLinkedinNow: async (payload) => {
     try {
       return await request("/linkedin/jobs/run-now", { method: "POST", body: JSON.stringify(payload) });

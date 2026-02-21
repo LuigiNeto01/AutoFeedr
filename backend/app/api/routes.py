@@ -19,8 +19,10 @@ from app.models.models import (
     LeetCodeJob,
     LeetCodeJobLog,
     LeetCodeSchedule,
+    LeetCodeScheduleRun,
     LinkedinAccount,
     Schedule,
+    ScheduleRun,
     User,
 )
 from app.schemas.schemas import (
@@ -456,6 +458,27 @@ def update_schedule(
     db.commit()
     db.refresh(schedule)
     return schedule
+
+
+@router.delete("/linkedin/schedules/{schedule_id}")
+def delete_schedule(
+    schedule_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    schedule = (
+        db.query(Schedule)
+        .join(LinkedinAccount, LinkedinAccount.id == Schedule.account_id)
+        .filter(Schedule.id == schedule_id, LinkedinAccount.owner_user_id == current_user.id)
+        .first()
+    )
+    if not schedule:
+        raise HTTPException(status_code=404, detail="Agenda nao encontrada.")
+
+    db.query(ScheduleRun).filter(ScheduleRun.schedule_id == schedule_id).delete(synchronize_session=False)
+    db.delete(schedule)
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/linkedin/jobs/run-now", response_model=JobOut)
@@ -909,6 +932,33 @@ def update_leetcode_schedule(
     db.commit()
     db.refresh(schedule)
     return schedule
+
+
+@router.delete("/leetcode/schedules/{schedule_id}")
+def delete_leetcode_schedule(
+    schedule_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    schedule = (
+        db.query(LeetCodeSchedule)
+        .join(GitHubRepository, GitHubRepository.id == LeetCodeSchedule.repository_id)
+        .filter(LeetCodeSchedule.id == schedule_id, GitHubRepository.owner_user_id == current_user.id)
+        .first()
+    )
+    if not schedule:
+        raise HTTPException(status_code=404, detail="Agenda LeetCode nao encontrada.")
+
+    db.query(LeetCodeJob).filter(LeetCodeJob.schedule_id == schedule_id).update(
+        {LeetCodeJob.schedule_id: None},
+        synchronize_session=False,
+    )
+    db.query(LeetCodeScheduleRun).filter(LeetCodeScheduleRun.schedule_id == schedule_id).delete(
+        synchronize_session=False
+    )
+    db.delete(schedule)
+    db.commit()
+    return {"ok": True}
 
 
 @router.get("/leetcode/completed", response_model=list[LeetCodeCompletedOut])

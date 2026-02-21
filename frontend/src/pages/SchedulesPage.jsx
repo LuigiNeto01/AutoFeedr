@@ -176,6 +176,27 @@ export default function SchedulesPage() {
     }
   };
 
+  const deleteSchedule = async (row) => {
+    if (busyId) return;
+    const label = row.kind === "linkedin_post" ? "LinkedIn" : "LeetCode";
+    const shouldDelete = window.confirm(`Excluir agendamento ${label} #${row.id}? Essa acao nao pode ser desfeita.`);
+    if (!shouldDelete) return;
+
+    setBusyId(row.uid);
+    setError("");
+    setSuccess("");
+    try {
+      if (row.kind === "linkedin_post") await api.deleteLinkedinSchedule(row.id);
+      else await api.deleteLeetcodeSchedule(row.id);
+      setSuccess("Agendamento excluido com sucesso.");
+      await loadData({ silent: true });
+    } catch (err) {
+      setError(getErrorMessage(err, "Falha ao excluir agendamento."));
+    } finally {
+      setBusyId("");
+    }
+  };
+
   if (loading) {
     return (
       <div
@@ -217,10 +238,24 @@ export default function SchedulesPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <StatusBadge active={row.isActive} isDarkMode={isDarkMode} />
-                    <label className={`inline-flex items-center gap-1 text-xs ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>
-                      <input type="checkbox" checked={row.isActive} disabled={busyId === row.uid} onChange={(e) => toggleActive(row, e.target.checked)} />
-                      Ativo
-                    </label>
+                    <ToggleSwitch
+                      checked={row.isActive}
+                      disabled={busyId === row.uid}
+                      onChange={(checked) => toggleActive(row, checked)}
+                      isDarkMode={isDarkMode}
+                    />
+                    <button
+                      type="button"
+                      disabled={busyId === row.uid}
+                      onClick={() => deleteSchedule(row)}
+                      className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
+                        isDarkMode
+                          ? "border-red-800/80 bg-red-950/40 text-red-200 hover:bg-red-900/50 disabled:opacity-50"
+                          : "border-red-300 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50"
+                      }`}
+                    >
+                      Excluir
+                    </button>
                   </div>
                 </div>
                 <div className={`mt-2 grid gap-1 text-xs md:grid-cols-4 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
@@ -395,6 +430,33 @@ function CheckField({ label, checked, onChange, isDarkMode }) {
 
 function StatusBadge({ active, isDarkMode }) {
   return <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase ${active ? (isDarkMode ? "bg-emerald-500/20 text-emerald-300" : "bg-emerald-100 text-emerald-700") : (isDarkMode ? "bg-slate-700 text-slate-300" : "bg-slate-200 text-slate-600")}`}>{active ? "Ativo" : "Inativo"}</span>;
+}
+
+function ToggleSwitch({ checked, onChange, disabled, isDarkMode }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full border transition ${
+        checked
+          ? isDarkMode
+            ? "border-emerald-500/70 bg-emerald-500/30"
+            : "border-emerald-400 bg-emerald-200"
+          : isDarkMode
+            ? "border-slate-600 bg-slate-700"
+            : "border-slate-300 bg-slate-200"
+      } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full transition ${
+          checked ? "translate-x-6 bg-emerald-500" : "translate-x-1 bg-white"
+        }`}
+      />
+    </button>
+  );
 }
 
 function formatDate(value) {
