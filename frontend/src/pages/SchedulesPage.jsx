@@ -51,7 +51,6 @@ function nextRoundedSlot() {
 export default function SchedulesPage() {
   const isDarkMode = useOutletContext()?.isDarkMode ?? false;
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [savingLi, setSavingLi] = useState(false);
   const [savingLc, setSavingLc] = useState(false);
   const [busyId, setBusyId] = useState("");
@@ -70,8 +69,7 @@ export default function SchedulesPage() {
   const [dragState, setDragState] = useState(null);
 
   async function loadData({ silent = false } = {}) {
-    if (silent) setRefreshing(true);
-    else setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const [liAccounts, ghRepos, liSchedules, lcSchedules] = await Promise.all([
         api.linkedinAccounts(),
@@ -87,8 +85,7 @@ export default function SchedulesPage() {
     } catch (err) {
       setError(getErrorMessage(err, "Falha ao carregar agendamentos."));
     } finally {
-      if (silent) setRefreshing(false);
-      else setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
@@ -152,11 +149,6 @@ export default function SchedulesPage() {
     scheduleRows.forEach((row) => grouped.get(row.dayOfWeek)?.push(row));
     return grouped;
   }, [scheduleRows]);
-
-  const rows = useMemo(
-    () => [...scheduleRows].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
-    [scheduleRows],
-  );
 
   const openCreateModal = ({ dayOfWeek, timeLocal, flow } = {}) => {
     const fallback = nextRoundedSlot();
@@ -369,20 +361,6 @@ export default function SchedulesPage() {
       {error ? <Message tone="error" text={error} isDarkMode={isDarkMode} /> : null}
       {success ? <Message tone="success" text={success} isDarkMode={isDarkMode} /> : null}
 
-      <section className={`rounded-3xl border p-5 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className={`text-xs uppercase tracking-[0.22em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Planejamento</p>
-            <h2 className={`mt-1 text-2xl font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Agenda Semanal Recorrente</h2>
-            <p className={`mt-1 text-sm ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Clique ou arraste no calendario para criar um agendamento.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={() => openCreateModal({ flow: tab })} className={`rounded-xl px-3 py-2 text-sm font-semibold text-white transition ${isDarkMode ? "bg-sky-600 hover:bg-sky-500" : "bg-slate-900 hover:bg-slate-700"}`}>Novo agendamento</button>
-            <button type="button" onClick={() => loadData({ silent: true })} className={`rounded-lg border px-3 py-2 text-sm transition ${isDarkMode ? "border-slate-600 text-slate-200 hover:bg-slate-800" : "border-slate-300 text-slate-700 hover:bg-slate-100"}`}>{refreshing ? "Atualizando..." : "Atualizar"}</button>
-          </div>
-        </div>
-      </section>
-
       <section className={`rounded-2xl border p-4 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
         <div className="mb-3 flex items-center justify-between">
           <h3 className={`text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Calendario de automacoes</h3>
@@ -489,32 +467,6 @@ export default function SchedulesPage() {
             </div>
           </div>
         </div>
-      </section>
-
-      <section className={`rounded-2xl border p-4 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
-        <h3 className={`mb-3 text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Resumo dos schedules</h3>
-        {rows.length === 0 ? (
-          <Empty isDarkMode={isDarkMode} text="Nenhum schedule encontrado." />
-        ) : (
-          <div className="space-y-2">
-            {rows.map((row) => (
-              <article key={row.uid} className={`rounded-xl border p-3 ${isDarkMode ? "border-slate-700 bg-slate-800/60" : "border-slate-200 bg-slate-50"}`}>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="space-y-1">
-                    <p className={`text-xs uppercase tracking-wide ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{row.kind} #{row.id}</p>
-                    <p className={`text-sm ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{row.destination} • {WEEK_DAYS[row.dayOfWeek]?.short} {row.timeLocal}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <StatusBadge active={row.isActive} isDarkMode={isDarkMode} />
-                    <ToggleSwitch checked={row.isActive} disabled={busyId === row.uid} onChange={(checked) => toggleActive(row, checked)} isDarkMode={isDarkMode} />
-                    <button type="button" onClick={() => openEditModal(row)} className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${isDarkMode ? "border-slate-600 text-slate-200 hover:bg-slate-700" : "border-slate-300 text-slate-700 hover:bg-slate-100"}`}>Editar</button>
-                    <button type="button" disabled={busyId === row.uid} onClick={() => deleteSchedule(row)} className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${isDarkMode ? "border-red-800/80 bg-red-950/40 text-red-200 hover:bg-red-900/50" : "border-red-300 bg-red-50 text-red-700 hover:bg-red-100"}`}>Excluir</button>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
       </section>
 
       {isModalOpen ? (
