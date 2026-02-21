@@ -105,12 +105,16 @@ export default function SchedulesPage() {
     setError("");
     setSuccess("");
     try {
+      const normalizedTimeLocal = sanitizeTimeInput(liForm.time_local);
+      if (normalizedTimeLocal && !isValidLocalTime(normalizedTimeLocal)) {
+        throw new Error("Hora local invalida. Use o formato HH:MM.");
+      }
       await api.createLinkedinSchedule({
         account_id: Number(liForm.account_id),
         topic: liForm.topic.trim(),
         cron_expr: liForm.cron_expr.trim() || undefined,
         day_of_week: liForm.day_of_week === "" ? undefined : Number(liForm.day_of_week),
-        time_local: liForm.time_local.trim() || undefined,
+        time_local: normalizedTimeLocal || undefined,
         timezone: liForm.timezone.trim(),
         is_active: liForm.is_active,
       });
@@ -132,11 +136,15 @@ export default function SchedulesPage() {
     setError("");
     setSuccess("");
     try {
+      const normalizedTimeLocal = sanitizeTimeInput(lcForm.time_local);
+      if (normalizedTimeLocal && !isValidLocalTime(normalizedTimeLocal)) {
+        throw new Error("Hora local invalida. Use o formato HH:MM.");
+      }
       await api.createLeetcodeSchedule({
         repository_id: Number(lcForm.repository_id),
         cron_expr: lcForm.cron_expr.trim() || undefined,
         day_of_week: lcForm.day_of_week === "" ? undefined : Number(lcForm.day_of_week),
-        time_local: lcForm.time_local.trim() || undefined,
+        time_local: normalizedTimeLocal || undefined,
         timezone: lcForm.timezone.trim(),
         selection_strategy: lcForm.selection_strategy,
         difficulty_policy: lcForm.difficulty_policy,
@@ -282,7 +290,7 @@ function CreateScheduleModal({
             <InputField label="Cron expression" value={liForm.cron_expr} onChange={(value) => setLiForm((prev) => ({ ...prev, cron_expr: value }))} isDarkMode={isDarkMode} />
             <div className="grid gap-3 grid-cols-2">
               <SelectField label="Dia da semana" value={liForm.day_of_week} onChange={(value) => setLiForm((prev) => ({ ...prev, day_of_week: value }))} isDarkMode={isDarkMode} options={WEEK_DAYS} />
-              <InputField label="Hora local" value={liForm.time_local} onChange={(value) => setLiForm((prev) => ({ ...prev, time_local: value }))} isDarkMode={isDarkMode} />
+              <InputField type="time" step={60} label="Hora local" value={liForm.time_local} onChange={(value) => setLiForm((prev) => ({ ...prev, time_local: value }))} isDarkMode={isDarkMode} />
             </div>
             <InputField label="Timezone" value={liForm.timezone} onChange={(value) => setLiForm((prev) => ({ ...prev, timezone: value }))} isDarkMode={isDarkMode} />
             <CheckField label="Ativo" checked={liForm.is_active} onChange={(checked) => setLiForm((prev) => ({ ...prev, is_active: checked }))} isDarkMode={isDarkMode} />
@@ -303,7 +311,7 @@ function CreateScheduleModal({
             <InputField label="Cron expression" value={lcForm.cron_expr} onChange={(value) => setLcForm((prev) => ({ ...prev, cron_expr: value }))} isDarkMode={isDarkMode} />
             <div className="grid gap-3 grid-cols-2">
               <SelectField label="Dia da semana" value={lcForm.day_of_week} onChange={(value) => setLcForm((prev) => ({ ...prev, day_of_week: value }))} isDarkMode={isDarkMode} options={WEEK_DAYS} />
-              <InputField label="Hora local" value={lcForm.time_local} onChange={(value) => setLcForm((prev) => ({ ...prev, time_local: value }))} isDarkMode={isDarkMode} />
+              <InputField type="time" step={60} label="Hora local" value={lcForm.time_local} onChange={(value) => setLcForm((prev) => ({ ...prev, time_local: value }))} isDarkMode={isDarkMode} />
             </div>
             <InputField label="Timezone" value={lcForm.timezone} onChange={(value) => setLcForm((prev) => ({ ...prev, timezone: value }))} isDarkMode={isDarkMode} />
             <div className="grid gap-3 grid-cols-2">
@@ -373,8 +381,8 @@ function Chip({ active, onClick, isDarkMode, children }) {
   return <button type="button" onClick={onClick} className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${active ? (isDarkMode ? "bg-slate-600 text-slate-100" : "bg-white text-slate-900 shadow-sm") : (isDarkMode ? "text-slate-300 hover:bg-slate-700" : "text-slate-600 hover:bg-slate-100")}`}>{children}</button>;
 }
 
-function InputField({ label, value, onChange, isDarkMode, type = "text" }) {
-  return <label className="block"><span className={`mb-1 block text-xs font-medium ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>{label}</span><input type={type} value={value} onChange={(e) => onChange(e.target.value)} className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-100 focus:border-sky-500" : "border-slate-300 bg-white text-slate-900 focus:border-slate-900"}`} /></label>;
+function InputField({ label, value, onChange, isDarkMode, type = "text", step }) {
+  return <label className="block"><span className={`mb-1 block text-xs font-medium ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>{label}</span><input type={type} value={value} step={step} onChange={(e) => onChange(e.target.value)} className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-100 focus:border-sky-500" : "border-slate-300 bg-white text-slate-900 focus:border-slate-900"}`} /></label>;
 }
 
 function SelectField({ label, value, onChange, options, isDarkMode }) {
@@ -404,6 +412,14 @@ function extractRepoName(repoSshUrl) {
   const slash = raw.lastIndexOf("/");
   const name = slash >= 0 ? raw.slice(slash + 1) : raw;
   return name.replace(/\.git$/, "") || raw;
+}
+
+function sanitizeTimeInput(value) {
+  return String(value || "").trim().slice(0, 5);
+}
+
+function isValidLocalTime(value) {
+  return /^([01]\d|2[0-3]):([0-5]\d)$/.test(value);
 }
 
 function getErrorMessage(err, fallback) {
