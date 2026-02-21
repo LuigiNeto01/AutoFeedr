@@ -116,12 +116,12 @@ export const api = {
   },
   runLeetcodeNow: (payload) =>
     request("/leetcode/jobs/run-now", { method: "POST", body: JSON.stringify(payload) }),
-  linkedinAccounts: () => request("/accounts"),
+  linkedinAccounts: () => request("/linkedin/accounts"),
   createLinkedinAccount: (payload) =>
-    request("/accounts", { method: "POST", body: JSON.stringify(payload) }),
+    request("/linkedin/accounts", { method: "POST", body: JSON.stringify(payload) }),
   updateLinkedinAccount: (id, payload) =>
-    request(`/accounts/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
-  deleteLinkedinAccount: (id) => request(`/accounts/${id}`, { method: "DELETE" }),
+    request(`/linkedin/accounts/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  deleteLinkedinAccount: (id) => request(`/linkedin/accounts/${id}`, { method: "DELETE" }),
   githubAccounts: () => request("/github/accounts"),
   createGithubAccount: (payload) =>
     request("/github/accounts", { method: "POST", body: JSON.stringify(payload) }),
