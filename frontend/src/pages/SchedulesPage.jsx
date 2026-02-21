@@ -2,26 +2,51 @@ import { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 
+const DEFAULT_TIMEZONE = "America/Sao_Paulo";
+const SLOTS_PER_HOUR = 2;
+const SLOT_MINUTES = 60 / SLOTS_PER_HOUR;
+const TOTAL_SLOTS = 24 * SLOTS_PER_HOUR;
+const HOUR_HEIGHT = 56;
+const SLOT_HEIGHT = HOUR_HEIGHT / SLOTS_PER_HOUR;
+
+const WEEK_DAYS = [
+  { value: "0", label: "Domingo", short: "Dom" },
+  { value: "1", label: "Segunda", short: "Seg" },
+  { value: "2", label: "Terca", short: "Ter" },
+  { value: "3", label: "Quarta", short: "Qua" },
+  { value: "4", label: "Quinta", short: "Qui" },
+  { value: "5", label: "Sexta", short: "Sex" },
+  { value: "6", label: "Sabado", short: "Sab" },
+];
+
 const LI_CREATE = {
   account_id: "",
   topic: "",
-  cron_expr: "",
   day_of_week: "",
   time_local: "",
-  timezone: "America/Sao_Paulo",
+  timezone: DEFAULT_TIMEZONE,
   is_active: true,
 };
 const LC_CREATE = {
   repository_id: "",
-  cron_expr: "",
   day_of_week: "",
   time_local: "",
-  timezone: "America/Sao_Paulo",
+  timezone: DEFAULT_TIMEZONE,
   selection_strategy: "random",
   difficulty_policy: "random",
   max_attempts: 2,
   is_active: true,
 };
+
+function nextRoundedSlot() {
+  const now = new Date();
+  const minutes = now.getHours() * 60 + now.getMinutes();
+  const rounded = Math.min(23 * 60 + 30, Math.ceil(minutes / SLOT_MINUTES) * SLOT_MINUTES);
+  return {
+    dayOfWeek: now.getDay(),
+    timeLocal: minutesToTime(rounded),
+  };
+}
 
 export default function SchedulesPage() {
   const isDarkMode = useOutletContext()?.isDarkMode ?? false;
@@ -39,7 +64,10 @@ export default function SchedulesPage() {
   const [leetcodeSchedules, setLeetcodeSchedules] = useState([]);
   const [liForm, setLiForm] = useState(LI_CREATE);
   const [lcForm, setLcForm] = useState(LC_CREATE);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState("create");
+  const [editingRow, setEditingRow] = useState(null);
+  const [dragState, setDragState] = useState(null);
 
   async function loadData({ silent = false } = {}) {
     if (silent) setRefreshing(true);
@@ -68,35 +96,123 @@ export default function SchedulesPage() {
     loadData();
   }, []);
 
-  const rows = useMemo(() => {
+  const scheduleRows = useMemo(() => {
     const accountById = new Map(accounts.map((item) => [item.id, item.name]));
     const repoById = new Map(repositories.map((item) => [item.id, extractRepoName(item.repo_ssh_url)]));
-    const liRows = linkedinSchedules.map((item) => ({
-      id: item.id,
-      uid: `li-${item.id}`,
-      kind: "linkedin_post",
-      destination: accountById.get(item.account_id) ?? `Conta #${item.account_id}`,
-      frequency: item.cron_expr,
-      timezone: item.timezone,
-      retries: "-",
-      isActive: item.is_active,
-      updatedAt: item.updated_at,
-    }));
-    const lcRows = leetcodeSchedules.map((item) => ({
-      id: item.id,
-      uid: `lc-${item.id}`,
-      kind: "leetcode_commit",
-      destination: repoById.get(item.repository_id) ?? `Repo #${item.repository_id}`,
-      frequency: item.cron_expr,
-      timezone: item.timezone,
-      retries: String(item.max_attempts || "-"),
-      isActive: item.is_active,
-      updatedAt: item.updated_at,
-    }));
-    return [...liRows, ...lcRows].sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-    );
+
+    const liRows = linkedinSchedules
+      .map((item) => {
+        const slot = resolveScheduleSlot(item);
+        if (!slot) return null;
+        return {
+          id: item.id,
+          uid: `li-${item.id}`,
+          kind: "linkedin_post",
+          destination: accountById.get(item.account_id) ?? `Conta #${item.account_id}`,
+          frequency: item.cron_expr,
+          timezone: item.timezone || DEFAULT_TIMEZONE,
+          retries: "-",
+          isActive: item.is_active,
+          updatedAt: item.updated_at,
+          dayOfWeek: slot.dayOfWeek,
+          timeLocal: slot.timeLocal,
+          minutes: slot.minutes,
+          raw: item,
+        };
+      })
+      .filter(Boolean);
+
+    const lcRows = leetcodeSchedules
+      .map((item) => {
+        const slot = resolveScheduleSlot(item);
+        if (!slot) return null;
+        return {
+          id: item.id,
+          uid: `lc-${item.id}`,
+          kind: "leetcode_commit",
+          destination: repoById.get(item.repository_id) ?? `Repo #${item.repository_id}`,
+          frequency: item.cron_expr,
+          timezone: item.timezone || DEFAULT_TIMEZONE,
+          retries: String(item.max_attempts || "-"),
+          isActive: item.is_active,
+          updatedAt: item.updated_at,
+          dayOfWeek: slot.dayOfWeek,
+          timeLocal: slot.timeLocal,
+          minutes: slot.minutes,
+          raw: item,
+        };
+      })
+      .filter(Boolean);
+
+    return [...liRows, ...lcRows].sort((a, b) => a.minutes - b.minutes || a.id - b.id);
   }, [accounts, repositories, linkedinSchedules, leetcodeSchedules]);
+
+  const rowsByDay = useMemo(() => {
+    const grouped = new Map(Array.from({ length: 7 }, (_, day) => [day, []]));
+    scheduleRows.forEach((row) => grouped.get(row.dayOfWeek)?.push(row));
+    return grouped;
+  }, [scheduleRows]);
+
+  const rows = useMemo(
+    () => [...scheduleRows].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
+    [scheduleRows],
+  );
+
+  const openCreateModal = ({ dayOfWeek, timeLocal, flow } = {}) => {
+    const fallback = nextRoundedSlot();
+    const resolvedDay = Number.isInteger(dayOfWeek) ? dayOfWeek : fallback.dayOfWeek;
+    const resolvedTime = timeLocal || fallback.timeLocal;
+
+    const baseSlot = {
+      day_of_week: String(resolvedDay),
+      time_local: resolvedTime,
+      timezone: DEFAULT_TIMEZONE,
+      is_active: true,
+    };
+
+    setLiForm((prev) => ({ ...LI_CREATE, ...baseSlot, account_id: prev.account_id || "" }));
+    setLcForm((prev) => ({ ...LC_CREATE, ...baseSlot, repository_id: prev.repository_id || "" }));
+    setTab(flow || tab);
+    setModalMode("create");
+    setEditingRow(null);
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (row) => {
+    setTab(row.kind === "linkedin_post" ? "linkedin" : "leetcode");
+    setModalMode("edit");
+    setEditingRow(row);
+    if (row.kind === "linkedin_post") {
+      setLiForm({
+        ...LI_CREATE,
+        account_id: String(row.raw.account_id),
+        topic: row.raw.topic || "",
+        day_of_week: String(row.dayOfWeek),
+        time_local: row.timeLocal,
+        timezone: row.raw.timezone || DEFAULT_TIMEZONE,
+        is_active: row.isActive,
+      });
+    } else {
+      setLcForm({
+        ...LC_CREATE,
+        repository_id: String(row.raw.repository_id),
+        day_of_week: String(row.dayOfWeek),
+        time_local: row.timeLocal,
+        timezone: row.raw.timezone || DEFAULT_TIMEZONE,
+        selection_strategy: row.raw.selection_strategy || "random",
+        difficulty_policy: row.raw.difficulty_policy || "random",
+        max_attempts: Number(row.raw.max_attempts || 2),
+        is_active: row.isActive,
+      });
+    }
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setModalMode("create");
+    setEditingRow(null);
+  };
 
   const createLinkedin = async (event) => {
     event.preventDefault();
@@ -106,24 +222,30 @@ export default function SchedulesPage() {
     setSuccess("");
     try {
       const normalizedTimeLocal = sanitizeTimeInput(liForm.time_local);
-      if (normalizedTimeLocal && !isValidLocalTime(normalizedTimeLocal)) {
+      if (!isValidLocalTime(normalizedTimeLocal)) {
         throw new Error("Hora local invalida. Use o formato HH:MM.");
       }
-      await api.createLinkedinSchedule({
+      const payload = {
         account_id: Number(liForm.account_id),
         topic: liForm.topic.trim(),
-        cron_expr: liForm.cron_expr.trim() || undefined,
-        day_of_week: liForm.day_of_week === "" ? undefined : Number(liForm.day_of_week),
-        time_local: normalizedTimeLocal || undefined,
-        timezone: liForm.timezone.trim(),
+        day_of_week: Number(liForm.day_of_week),
+        time_local: normalizedTimeLocal,
+        timezone: DEFAULT_TIMEZONE,
         is_active: liForm.is_active,
-      });
-      setLiForm(LI_CREATE);
-      setSuccess("Agendamento LinkedIn criado.");
-      setIsCreateModalOpen(false);
+      };
+
+      if (modalMode === "edit" && editingRow?.kind === "linkedin_post") {
+        await api.updateLinkedinSchedule(editingRow.id, payload);
+        setSuccess("Agendamento LinkedIn atualizado.");
+      } else {
+        await api.createLinkedinSchedule(payload);
+        setSuccess("Agendamento LinkedIn criado.");
+      }
+
+      closeModal();
       await loadData({ silent: true });
     } catch (err) {
-      setError(getErrorMessage(err, "Falha ao criar agendamento LinkedIn."));
+      setError(getErrorMessage(err, "Falha ao salvar agendamento LinkedIn."));
     } finally {
       setSavingLi(false);
     }
@@ -137,26 +259,32 @@ export default function SchedulesPage() {
     setSuccess("");
     try {
       const normalizedTimeLocal = sanitizeTimeInput(lcForm.time_local);
-      if (normalizedTimeLocal && !isValidLocalTime(normalizedTimeLocal)) {
+      if (!isValidLocalTime(normalizedTimeLocal)) {
         throw new Error("Hora local invalida. Use o formato HH:MM.");
       }
-      await api.createLeetcodeSchedule({
+      const payload = {
         repository_id: Number(lcForm.repository_id),
-        cron_expr: lcForm.cron_expr.trim() || undefined,
-        day_of_week: lcForm.day_of_week === "" ? undefined : Number(lcForm.day_of_week),
-        time_local: normalizedTimeLocal || undefined,
-        timezone: lcForm.timezone.trim(),
+        day_of_week: Number(lcForm.day_of_week),
+        time_local: normalizedTimeLocal,
+        timezone: DEFAULT_TIMEZONE,
         selection_strategy: lcForm.selection_strategy,
         difficulty_policy: lcForm.difficulty_policy,
-        max_attempts: Number(lcForm.max_attempts) || 1,
+        max_attempts: Number(lcForm.max_attempts) || 2,
         is_active: lcForm.is_active,
-      });
-      setLcForm(LC_CREATE);
-      setSuccess("Agendamento LeetCode criado.");
-      setIsCreateModalOpen(false);
+      };
+
+      if (modalMode === "edit" && editingRow?.kind === "leetcode_commit") {
+        await api.updateLeetcodeSchedule(editingRow.id, payload);
+        setSuccess("Agendamento LeetCode atualizado.");
+      } else {
+        await api.createLeetcodeSchedule(payload);
+        setSuccess("Agendamento LeetCode criado.");
+      }
+
+      closeModal();
       await loadData({ silent: true });
     } catch (err) {
-      setError(getErrorMessage(err, "Falha ao criar agendamento LeetCode."));
+      setError(getErrorMessage(err, "Falha ao salvar agendamento LeetCode."));
     } finally {
       setSavingLc(false);
     }
@@ -165,6 +293,7 @@ export default function SchedulesPage() {
   const toggleActive = async (row, checked) => {
     if (busyId) return;
     setBusyId(row.uid);
+    setError("");
     try {
       if (row.kind === "linkedin_post") await api.updateLinkedinSchedule(row.id, { is_active: checked });
       else await api.updateLeetcodeSchedule(row.id, { is_active: checked });
@@ -197,34 +326,173 @@ export default function SchedulesPage() {
     }
   };
 
+  const startDrag = (day, slot, flow = tab) => {
+    setDragState({
+      day,
+      flow,
+      startSlot: slot,
+      endSlot: slot,
+      dragging: true,
+    });
+  };
+
+  const moveDrag = (day, slot) => {
+    if (!dragState?.dragging || dragState.day !== day) return;
+    setDragState((prev) => ({ ...prev, endSlot: slot }));
+  };
+
+  const endDrag = () => {
+    if (!dragState?.dragging) return;
+    const slot = Math.min(dragState.startSlot, dragState.endSlot);
+    const minutes = slot * SLOT_MINUTES;
+    openCreateModal({
+      dayOfWeek: dragState.day,
+      timeLocal: minutesToTime(minutes),
+      flow: dragState.flow,
+    });
+    setDragState(null);
+  };
+
+  const isSlotSelected = (day, slot) => {
+    if (!dragState || dragState.day !== day) return false;
+    const start = Math.min(dragState.startSlot, dragState.endSlot);
+    const end = Math.max(dragState.startSlot, dragState.endSlot);
+    return slot >= start && slot <= end;
+  };
+
   if (loading) {
-    return (
-      <div
-        className={`h-64 animate-pulse rounded-2xl ${isDarkMode ? "bg-slate-800/70" : "bg-slate-200/70"}`}
-      />
-    );
+    return <div className={`h-64 animate-pulse rounded-2xl ${isDarkMode ? "bg-slate-800/70" : "bg-slate-200/70"}`} />;
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" onMouseUp={endDrag}>
       {error ? <Message tone="error" text={error} isDarkMode={isDarkMode} /> : null}
       {success ? <Message tone="success" text={success} isDarkMode={isDarkMode} /> : null}
 
       <section className={`rounded-3xl border p-5 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className={`text-xs uppercase tracking-[0.22em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Execucao</p>
-            <h2 className={`mt-1 text-2xl font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Agendamentos</h2>
+            <p className={`text-xs uppercase tracking-[0.22em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Planejamento</p>
+            <h2 className={`mt-1 text-2xl font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Agenda Semanal Recorrente</h2>
+            <p className={`mt-1 text-sm ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Clique ou arraste no calendario para criar um agendamento.</p>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => setIsCreateModalOpen(true)} className={`rounded-xl px-3 py-2 text-sm font-semibold text-white transition ${isDarkMode ? "bg-sky-600 hover:bg-sky-500" : "bg-slate-900 hover:bg-slate-700"}`}>Novo agendamento</button>
+            <button type="button" onClick={() => openCreateModal({ flow: tab })} className={`rounded-xl px-3 py-2 text-sm font-semibold text-white transition ${isDarkMode ? "bg-sky-600 hover:bg-sky-500" : "bg-slate-900 hover:bg-slate-700"}`}>Novo agendamento</button>
             <button type="button" onClick={() => loadData({ silent: true })} className={`rounded-lg border px-3 py-2 text-sm transition ${isDarkMode ? "border-slate-600 text-slate-200 hover:bg-slate-800" : "border-slate-300 text-slate-700 hover:bg-slate-100"}`}>{refreshing ? "Atualizando..." : "Atualizar"}</button>
           </div>
         </div>
       </section>
 
       <section className={`rounded-2xl border p-4 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
-        <h3 className={`mb-3 text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Schedules ativos</h3>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className={`text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Calendario de automacoes</h3>
+          <div className={`inline-flex rounded-xl border p-1 text-xs ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-300 bg-slate-50"}`}>
+            <Chip active={tab === "linkedin"} onClick={() => setTab("linkedin")} isDarkMode={isDarkMode}>Selecionar: LinkedIn</Chip>
+            <Chip active={tab === "leetcode"} onClick={() => setTab("leetcode")} isDarkMode={isDarkMode}>Selecionar: LeetCode</Chip>
+          </div>
+        </div>
+
+        <div className={`overflow-x-auto rounded-xl border ${isDarkMode ? "border-slate-700" : "border-slate-200"}`}>
+          <div className="min-w-[980px]">
+            <div className={`grid grid-cols-[80px_repeat(7,minmax(120px,1fr))] border-b ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-slate-50"}`}>
+              <div className="px-3 py-2" />
+              {WEEK_DAYS.map((day) => (
+                <div key={day.value} className={`px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>
+                  {day.short}
+                </div>
+              ))}
+            </div>
+
+            <div className="max-h-[720px] overflow-y-auto">
+              <div className="grid grid-cols-[80px_repeat(7,minmax(120px,1fr))]">
+                <div className={`relative ${isDarkMode ? "bg-slate-900" : "bg-white"}`} style={{ height: HOUR_HEIGHT * 24 }}>
+                  {Array.from({ length: 24 }, (_, hour) => (
+                    <div
+                      key={hour}
+                      className={`absolute left-0 right-0 text-[11px] ${isDarkMode ? "text-slate-500" : "text-slate-500"}`}
+                      style={{ top: hour * HOUR_HEIGHT - 8 }}
+                    >
+                      <span className="pl-2">{String(hour).padStart(2, "0")}:00</span>
+                    </div>
+                  ))}
+                </div>
+
+                {WEEK_DAYS.map((day) => {
+                  const dayNum = Number(day.value);
+                  const events = rowsByDay.get(dayNum) || [];
+                  return (
+                    <div
+                      key={day.value}
+                      className={`relative border-l ${isDarkMode ? "border-slate-800 bg-slate-900" : "border-slate-200 bg-white"}`}
+                      style={{ height: HOUR_HEIGHT * 24 }}
+                      onMouseUp={endDrag}
+                    >
+                      {Array.from({ length: TOTAL_SLOTS }, (_, slot) => (
+                        <button
+                          key={`${day.value}-${slot}`}
+                          type="button"
+                          onMouseDown={() => startDrag(dayNum, slot)}
+                          onMouseEnter={() => moveDrag(dayNum, slot)}
+                          onMouseUp={endDrag}
+                          className={`absolute left-0 right-0 border-b text-left transition ${isDarkMode ? "border-slate-800/80 hover:bg-sky-900/20" : "border-slate-100 hover:bg-sky-50"} ${isSlotSelected(dayNum, slot) ? (isDarkMode ? "bg-sky-800/30" : "bg-sky-100") : ""}`}
+                          style={{
+                            top: slot * SLOT_HEIGHT,
+                            height: SLOT_HEIGHT,
+                          }}
+                          aria-label={`Selecionar ${day.label} ${minutesToTime(slot * SLOT_MINUTES)}`}
+                        />
+                      ))}
+
+                      {events.map((event) => (
+                        <article
+                          key={event.uid}
+                          className={`absolute left-1 right-1 z-10 rounded-lg border p-2 shadow-sm ${event.kind === "linkedin_post" ? (isDarkMode ? "border-sky-500/40 bg-sky-900/35" : "border-sky-300 bg-sky-50") : (isDarkMode ? "border-emerald-500/40 bg-emerald-900/35" : "border-emerald-300 bg-emerald-50")}`}
+                          style={{
+                            top: Math.max(0, event.minutes / 60 * HOUR_HEIGHT),
+                            minHeight: 58,
+                          }}
+                          onMouseDown={(e) => e.stopPropagation()}
+                        >
+                          <p className={`text-[10px] font-semibold uppercase tracking-wide ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>{event.kind === "linkedin_post" ? "LinkedIn" : "LeetCode"}</p>
+                          <p className={`truncate text-xs font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{event.timeLocal} • {event.destination}</p>
+                          <div className="mt-1 flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(event)}
+                              className={`rounded px-2 py-0.5 text-[10px] font-medium ${isDarkMode ? "bg-slate-700 text-slate-200 hover:bg-slate-600" : "bg-slate-200 text-slate-800 hover:bg-slate-300"}`}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busyId === event.uid}
+                              onClick={() => toggleActive(event, !event.isActive)}
+                              className={`rounded px-2 py-0.5 text-[10px] font-medium ${event.isActive ? (isDarkMode ? "bg-emerald-700/70 text-emerald-100" : "bg-emerald-200 text-emerald-800") : (isDarkMode ? "bg-slate-700 text-slate-300" : "bg-slate-200 text-slate-700")}`}
+                            >
+                              {event.isActive ? "Ativo" : "Inativo"}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busyId === event.uid}
+                              onClick={() => deleteSchedule(event)}
+                              className={`rounded px-2 py-0.5 text-[10px] font-medium ${isDarkMode ? "bg-red-900/50 text-red-200 hover:bg-red-900/70" : "bg-red-100 text-red-700 hover:bg-red-200"}`}
+                            >
+                              Excluir
+                            </button>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className={`rounded-2xl border p-4 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
+        <h3 className={`mb-3 text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Resumo dos schedules</h3>
         {rows.length === 0 ? (
           <Empty isDarkMode={isDarkMode} text="Nenhum schedule encontrado." />
         ) : (
@@ -234,35 +502,14 @@ export default function SchedulesPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="space-y-1">
                     <p className={`text-xs uppercase tracking-wide ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{row.kind} #{row.id}</p>
-                    <p className={`text-sm break-all ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{row.destination}</p>
+                    <p className={`text-sm ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{row.destination} • {WEEK_DAYS[row.dayOfWeek]?.short} {row.timeLocal}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <StatusBadge active={row.isActive} isDarkMode={isDarkMode} />
-                    <ToggleSwitch
-                      checked={row.isActive}
-                      disabled={busyId === row.uid}
-                      onChange={(checked) => toggleActive(row, checked)}
-                      isDarkMode={isDarkMode}
-                    />
-                    <button
-                      type="button"
-                      disabled={busyId === row.uid}
-                      onClick={() => deleteSchedule(row)}
-                      className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
-                        isDarkMode
-                          ? "border-red-800/80 bg-red-950/40 text-red-200 hover:bg-red-900/50 disabled:opacity-50"
-                          : "border-red-300 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50"
-                      }`}
-                    >
-                      Excluir
-                    </button>
+                    <ToggleSwitch checked={row.isActive} disabled={busyId === row.uid} onChange={(checked) => toggleActive(row, checked)} isDarkMode={isDarkMode} />
+                    <button type="button" onClick={() => openEditModal(row)} className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${isDarkMode ? "border-slate-600 text-slate-200 hover:bg-slate-700" : "border-slate-300 text-slate-700 hover:bg-slate-100"}`}>Editar</button>
+                    <button type="button" disabled={busyId === row.uid} onClick={() => deleteSchedule(row)} className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${isDarkMode ? "border-red-800/80 bg-red-950/40 text-red-200 hover:bg-red-900/50" : "border-red-300 bg-red-50 text-red-700 hover:bg-red-100"}`}>Excluir</button>
                   </div>
-                </div>
-                <div className={`mt-2 grid gap-1 text-xs md:grid-cols-4 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
-                  <p>Frequencia: {row.frequency || "-"}</p>
-                  <p>Timezone: {row.timezone || "-"}</p>
-                  <p>Retries: {row.retries}</p>
-                  <p>Atualizado: {formatDate(row.updatedAt)}</p>
                 </div>
               </article>
             ))}
@@ -270,7 +517,7 @@ export default function SchedulesPage() {
         )}
       </section>
 
-      {isCreateModalOpen ? (
+      {isModalOpen ? (
         <CreateScheduleModal
           isDarkMode={isDarkMode}
           tab={tab}
@@ -285,7 +532,8 @@ export default function SchedulesPage() {
           createLeetcode={createLeetcode}
           savingLi={savingLi}
           savingLc={savingLc}
-          onClose={() => setIsCreateModalOpen(false)}
+          mode={modalMode}
+          onClose={closeModal}
         />
       ) : null}
     </div>
@@ -306,31 +554,38 @@ function CreateScheduleModal({
   createLeetcode,
   savingLi,
   savingLc,
+  mode,
   onClose,
 }) {
+  const slotLabel = tab === "linkedin"
+    ? `${WEEK_DAYS[Number(liForm.day_of_week)]?.label || "-"}, ${liForm.time_local || "-"}`
+    : `${WEEK_DAYS[Number(lcForm.day_of_week)]?.label || "-"}, ${lcForm.time_local || "-"}`;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button type="button" onClick={onClose} className="absolute inset-0 bg-black/55" aria-label="Fechar modal" />
       <div className={`relative z-10 w-full max-w-2xl rounded-2xl border p-4 shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
-        <h3 className={`mb-3 text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Novo agendamento</h3>
-        <div className={`mb-3 inline-flex rounded-xl border p-1 ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-300 bg-slate-50"}`}>
-          <Chip active={tab === "linkedin"} onClick={() => setTab("linkedin")} isDarkMode={isDarkMode}>LinkedIn</Chip>
-          <Chip active={tab === "leetcode"} onClick={() => setTab("leetcode")} isDarkMode={isDarkMode}>LeetCode</Chip>
-        </div>
+        <h3 className={`mb-1 text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{mode === "edit" ? "Editar agendamento" : "Novo agendamento"}</h3>
+        <p className={`mb-3 text-xs ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Horario selecionado: {slotLabel} • Timezone fixa: {DEFAULT_TIMEZONE}</p>
+
+        {mode !== "edit" ? (
+          <div className={`mb-3 inline-flex rounded-xl border p-1 ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-300 bg-slate-50"}`}>
+            <Chip active={tab === "linkedin"} onClick={() => setTab("linkedin")} isDarkMode={isDarkMode}>LinkedIn</Chip>
+            <Chip active={tab === "leetcode"} onClick={() => setTab("leetcode")} isDarkMode={isDarkMode}>LeetCode</Chip>
+          </div>
+        ) : null}
 
         {tab === "linkedin" ? (
           <form className="space-y-3" onSubmit={createLinkedin}>
             <SelectField label="Conta" value={liForm.account_id} onChange={(value) => setLiForm((prev) => ({ ...prev, account_id: value }))} isDarkMode={isDarkMode} options={accounts.map((item) => ({ value: String(item.id), label: item.name }))} />
             <InputField label="Topico" value={liForm.topic} onChange={(value) => setLiForm((prev) => ({ ...prev, topic: value }))} isDarkMode={isDarkMode} />
-            <InputField label="Cron expression" value={liForm.cron_expr} onChange={(value) => setLiForm((prev) => ({ ...prev, cron_expr: value }))} isDarkMode={isDarkMode} />
             <div className="grid gap-3 grid-cols-2">
-              <SelectField label="Dia da semana" value={liForm.day_of_week} onChange={(value) => setLiForm((prev) => ({ ...prev, day_of_week: value }))} isDarkMode={isDarkMode} options={WEEK_DAYS} />
-              <InputField type="time" step={60} label="Hora local" value={liForm.time_local} onChange={(value) => setLiForm((prev) => ({ ...prev, time_local: value }))} isDarkMode={isDarkMode} />
+              <SelectField label="Dia" value={liForm.day_of_week} onChange={(value) => setLiForm((prev) => ({ ...prev, day_of_week: value }))} isDarkMode={isDarkMode} options={WEEK_DAYS} />
+              <InputField type="time" step={60} label="Hora" value={liForm.time_local} onChange={(value) => setLiForm((prev) => ({ ...prev, time_local: value }))} isDarkMode={isDarkMode} />
             </div>
-            <InputField label="Timezone" value={liForm.timezone} onChange={(value) => setLiForm((prev) => ({ ...prev, timezone: value }))} isDarkMode={isDarkMode} />
             <CheckField label="Ativo" checked={liForm.is_active} onChange={(checked) => setLiForm((prev) => ({ ...prev, is_active: checked }))} isDarkMode={isDarkMode} />
             <div className="grid grid-cols-2 gap-2">
-              <button type="submit" disabled={savingLi} className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${isDarkMode ? "bg-sky-600 hover:bg-sky-500" : "bg-slate-900 hover:bg-slate-700"}`}>{savingLi ? "Criando..." : "Criar schedule LinkedIn"}</button>
+              <button type="submit" disabled={savingLi} className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${isDarkMode ? "bg-sky-600 hover:bg-sky-500" : "bg-slate-900 hover:bg-slate-700"}`}>{savingLi ? "Salvando..." : mode === "edit" ? "Salvar LinkedIn" : "Criar LinkedIn"}</button>
               <button type="button" onClick={onClose} className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${isDarkMode ? "bg-slate-700 text-slate-100 hover:bg-slate-600" : "bg-slate-200 text-slate-800 hover:bg-slate-300"}`}>Cancelar</button>
             </div>
           </form>
@@ -343,12 +598,10 @@ function CreateScheduleModal({
               isDarkMode={isDarkMode}
               options={repositories.map((item) => ({ value: String(item.id), label: extractRepoName(item.repo_ssh_url) }))}
             />
-            <InputField label="Cron expression" value={lcForm.cron_expr} onChange={(value) => setLcForm((prev) => ({ ...prev, cron_expr: value }))} isDarkMode={isDarkMode} />
             <div className="grid gap-3 grid-cols-2">
-              <SelectField label="Dia da semana" value={lcForm.day_of_week} onChange={(value) => setLcForm((prev) => ({ ...prev, day_of_week: value }))} isDarkMode={isDarkMode} options={WEEK_DAYS} />
-              <InputField type="time" step={60} label="Hora local" value={lcForm.time_local} onChange={(value) => setLcForm((prev) => ({ ...prev, time_local: value }))} isDarkMode={isDarkMode} />
+              <SelectField label="Dia" value={lcForm.day_of_week} onChange={(value) => setLcForm((prev) => ({ ...prev, day_of_week: value }))} isDarkMode={isDarkMode} options={WEEK_DAYS} />
+              <InputField type="time" step={60} label="Hora" value={lcForm.time_local} onChange={(value) => setLcForm((prev) => ({ ...prev, time_local: value }))} isDarkMode={isDarkMode} />
             </div>
-            <InputField label="Timezone" value={lcForm.timezone} onChange={(value) => setLcForm((prev) => ({ ...prev, timezone: value }))} isDarkMode={isDarkMode} />
             <div className="grid gap-3 grid-cols-2">
               <SelectField
                 label="Selection strategy"
@@ -377,7 +630,7 @@ function CreateScheduleModal({
             <InputField type="number" label="Max attempts" value={String(lcForm.max_attempts)} onChange={(value) => setLcForm((prev) => ({ ...prev, max_attempts: Number(value) || 1 }))} isDarkMode={isDarkMode} />
             <CheckField label="Ativo" checked={lcForm.is_active} onChange={(checked) => setLcForm((prev) => ({ ...prev, is_active: checked }))} isDarkMode={isDarkMode} />
             <div className="grid grid-cols-2 gap-2">
-              <button type="submit" disabled={savingLc} className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${isDarkMode ? "bg-sky-600 hover:bg-sky-500" : "bg-slate-900 hover:bg-slate-700"}`}>{savingLc ? "Criando..." : "Criar schedule LeetCode"}</button>
+              <button type="submit" disabled={savingLc} className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${isDarkMode ? "bg-sky-600 hover:bg-sky-500" : "bg-slate-900 hover:bg-slate-700"}`}>{savingLc ? "Salvando..." : mode === "edit" ? "Salvar LeetCode" : "Criar LeetCode"}</button>
               <button type="button" onClick={onClose} className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${isDarkMode ? "bg-slate-700 text-slate-100 hover:bg-slate-600" : "bg-slate-200 text-slate-800 hover:bg-slate-300"}`}>Cancelar</button>
             </div>
           </form>
@@ -386,16 +639,6 @@ function CreateScheduleModal({
     </div>
   );
 }
-
-const WEEK_DAYS = [
-  { value: "0", label: "Domingo" },
-  { value: "1", label: "Segunda" },
-  { value: "2", label: "Terca" },
-  { value: "3", label: "Quarta" },
-  { value: "4", label: "Quinta" },
-  { value: "5", label: "Sexta" },
-  { value: "6", label: "Sabado" },
-];
 
 function Message({ tone, text, isDarkMode }) {
   const styles = tone === "error"
@@ -450,21 +693,9 @@ function ToggleSwitch({ checked, onChange, disabled, isDarkMode }) {
             : "border-slate-300 bg-slate-200"
       } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
     >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full transition ${
-          checked ? "translate-x-6 bg-emerald-500" : "translate-x-1 bg-white"
-        }`}
-      />
+      <span className={`inline-block h-4 w-4 transform rounded-full transition ${checked ? "translate-x-6 bg-emerald-500" : "translate-x-1 bg-white"}`} />
     </button>
   );
-}
-
-function formatDate(value) {
-  try {
-    return new Date(value).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-  } catch {
-    return "-";
-  }
 }
 
 function extractRepoName(repoSshUrl) {
@@ -482,6 +713,42 @@ function sanitizeTimeInput(value) {
 
 function isValidLocalTime(value) {
   return /^([01]\d|2[0-3]):([0-5]\d)$/.test(value);
+}
+
+function resolveScheduleSlot(item) {
+  if (item?.day_of_week !== null && item?.day_of_week !== undefined && item?.time_local) {
+    const minutes = timeToMinutes(item.time_local);
+    if (minutes >= 0) return { dayOfWeek: Number(item.day_of_week), timeLocal: item.time_local, minutes };
+  }
+
+  const cron = String(item?.cron_expr || "").trim();
+  const parts = cron.split(/\s+/);
+  if (parts.length >= 5) {
+    const minute = Number(parts[0]);
+    const hour = Number(parts[1]);
+    const dayOfWeek = Number(parts[4]);
+    if (Number.isInteger(minute) && Number.isInteger(hour) && Number.isInteger(dayOfWeek) && dayOfWeek >= 0 && dayOfWeek <= 6) {
+      const minutes = hour * 60 + minute;
+      if (minutes >= 0 && minutes < 1440) {
+        return { dayOfWeek, timeLocal: minutesToTime(minutes), minutes };
+      }
+    }
+  }
+  return null;
+}
+
+function timeToMinutes(value) {
+  const text = sanitizeTimeInput(value);
+  if (!isValidLocalTime(text)) return -1;
+  const [hour, minute] = text.split(":").map(Number);
+  return hour * 60 + minute;
+}
+
+function minutesToTime(totalMinutes) {
+  const safe = Math.max(0, Math.min(1439, Number(totalMinutes) || 0));
+  const hour = Math.floor(safe / 60);
+  const minute = safe % 60;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
 function getErrorMessage(err, fallback) {
