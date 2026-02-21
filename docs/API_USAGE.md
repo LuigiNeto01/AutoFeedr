@@ -124,21 +124,37 @@ Exemplo:
 curl -s http://localhost:8000/prompts/defaults
 ```
 
+### 4.2.1 Migracao de endpoints LinkedIn (antigo -> novo)
+
+As rotas antigas sem namespace foram descontinuadas. Use apenas os novos endpoints com prefixo `/linkedin`.
+
+| Endpoint antigo | Endpoint novo |
+| --- | --- |
+| `GET /accounts` | `GET /linkedin/accounts` |
+| `POST /accounts` | `POST /linkedin/accounts` |
+| `PUT /accounts/{account_id}` | `PUT /linkedin/accounts/{account_id}` |
+| `DELETE /accounts/{account_id}` | `DELETE /linkedin/accounts/{account_id}` |
+| `GET /schedules` | `GET /linkedin/schedules` |
+| `POST /schedules` | `POST /linkedin/schedules` |
+| `PUT /schedules/{schedule_id}` | `PUT /linkedin/schedules/{schedule_id}` |
+| `POST /jobs/publish-now` | `POST /linkedin/jobs/run-now` |
+| `GET /jobs?limit=...` | `GET /linkedin/jobs?limit=...` |
+
 ### 4.3 Listar contas
 
-`GET /accounts`
+`GET /linkedin/accounts`
 
 Resposta: array de `AccountOut`.
 
 Exemplo:
 
 ```bash
-curl -s http://localhost:8000/accounts
+curl -s http://localhost:8000/linkedin/accounts
 ```
 
 ### 4.4 Criar conta
 
-`POST /accounts`
+`POST /linkedin/accounts`
 
 Request body:
 
@@ -163,7 +179,7 @@ Validacoes:
 Exemplo:
 
 ```bash
-curl -s -X POST http://localhost:8000/accounts \
+curl -s -X POST http://localhost:8000/linkedin/accounts \
   -H "Content-Type: application/json" \
   -d '{
     "name":"Luigi",
@@ -175,7 +191,7 @@ curl -s -X POST http://localhost:8000/accounts \
 
 ### 4.5 Atualizar conta
 
-`PUT /accounts/{account_id}`
+`PUT /linkedin/accounts/{account_id}`
 
 Campos permitidos no body:
 
@@ -188,7 +204,7 @@ Campos permitidos no body:
 Exemplo:
 
 ```bash
-curl -s -X PUT http://localhost:8000/accounts/1 \
+curl -s -X PUT http://localhost:8000/linkedin/accounts/1 \
   -H "Content-Type: application/json" \
   -d '{
     "prompt_generation":"Novo prompt de geracao",
@@ -199,19 +215,19 @@ curl -s -X PUT http://localhost:8000/accounts/1 \
 
 ### 4.6 Listar agendas
 
-`GET /schedules`
+`GET /linkedin/schedules`
 
 Resposta: array de `ScheduleOut`.
 
 Exemplo:
 
 ```bash
-curl -s http://localhost:8000/schedules
+curl -s http://localhost:8000/linkedin/schedules
 ```
 
 ### 4.7 Criar agenda
 
-`POST /schedules`
+`POST /linkedin/schedules`
 
 Opcao A (recomendada): `day_of_week` + `time_local`.
 
@@ -249,7 +265,7 @@ Validacoes:
 Exemplo:
 
 ```bash
-curl -s -X POST http://localhost:8000/schedules \
+curl -s -X POST http://localhost:8000/linkedin/schedules \
   -H "Content-Type: application/json" \
   -d '{
     "account_id":1,
@@ -263,7 +279,7 @@ curl -s -X POST http://localhost:8000/schedules \
 
 ### 4.8 Atualizar agenda
 
-`PUT /schedules/{schedule_id}`
+`PUT /linkedin/schedules/{schedule_id}`
 
 Regras:
 
@@ -273,7 +289,7 @@ Regras:
 Exemplo:
 
 ```bash
-curl -s -X PUT http://localhost:8000/schedules/1 \
+curl -s -X PUT http://localhost:8000/linkedin/schedules/1 \
   -H "Content-Type: application/json" \
   -d '{
     "topic":"LLM",
@@ -286,7 +302,7 @@ curl -s -X PUT http://localhost:8000/schedules/1 \
 
 ### 4.9 Publicacao imediata
 
-`POST /jobs/publish-now`
+`POST /linkedin/jobs/run-now`
 
 Request body:
 
@@ -312,7 +328,7 @@ Exemplos:
 Por tema:
 
 ```bash
-curl -s -X POST http://localhost:8000/jobs/publish-now \
+curl -s -X POST http://localhost:8000/linkedin/jobs/run-now \
   -H "Content-Type: application/json" \
   -d '{
     "account_id":1,
@@ -323,7 +339,7 @@ curl -s -X POST http://localhost:8000/jobs/publish-now \
 Por URL de paper:
 
 ```bash
-curl -s -X POST http://localhost:8000/jobs/publish-now \
+curl -s -X POST http://localhost:8000/linkedin/jobs/run-now \
   -H "Content-Type: application/json" \
   -d '{
     "account_id":1,
@@ -334,7 +350,7 @@ curl -s -X POST http://localhost:8000/jobs/publish-now \
 Por texto de paper:
 
 ```bash
-curl -s -X POST http://localhost:8000/jobs/publish-now \
+curl -s -X POST http://localhost:8000/linkedin/jobs/run-now \
   -H "Content-Type: application/json" \
   -d '{
     "account_id":1,
@@ -344,7 +360,7 @@ curl -s -X POST http://localhost:8000/jobs/publish-now \
 
 ### 4.10 Listar jobs
 
-`GET /jobs?limit=50`
+`GET /linkedin/jobs?limit=50`
 
 Query params:
 
@@ -353,15 +369,15 @@ Query params:
 Exemplo:
 
 ```bash
-curl -s "http://localhost:8000/jobs?limit=20"
+curl -s "http://localhost:8000/linkedin/jobs?limit=20"
 ```
 
 ## 5) Erros comuns e diagnostico
 
 1. `404 Conta nao encontrada`
-   - `account_id` inexistente em `/schedules` ou `/jobs/publish-now`.
+   - `account_id` inexistente em `/schedules` ou `/linkedin/jobs/run-now`.
 2. `409 Conta com esse nome ja existe`
-   - Nome duplicado em `POST /accounts`.
+   - Nome duplicado em `POST /linkedin/accounts`.
 3. `422 Informe cron_expr ou (day_of_week + time_local)`
    - Body incompleto em criacao de agenda.
 4. `422 Informe topic, paper_url ou paper_text`
@@ -402,7 +418,7 @@ curl -s http://localhost:8000/health
 3. Cadastrar conta:
 
 ```bash
-curl -s -X POST http://localhost:8000/accounts \
+curl -s -X POST http://localhost:8000/linkedin/accounts \
   -H "Content-Type: application/json" \
   -d '{"name":"Conta1","token":"token_aqui","urn":"urn_aqui"}'
 ```
@@ -410,7 +426,7 @@ curl -s -X POST http://localhost:8000/accounts \
 4. Criar agenda:
 
 ```bash
-curl -s -X POST http://localhost:8000/schedules \
+curl -s -X POST http://localhost:8000/linkedin/schedules \
   -H "Content-Type: application/json" \
   -d '{"account_id":1,"topic":"machine learning","day_of_week":2,"time_local":"12:00","timezone":"America/Sao_Paulo"}'
 ```
@@ -418,7 +434,7 @@ curl -s -X POST http://localhost:8000/schedules \
 5. Publicar agora:
 
 ```bash
-curl -s -X POST http://localhost:8000/jobs/publish-now \
+curl -s -X POST http://localhost:8000/linkedin/jobs/run-now \
   -H "Content-Type: application/json" \
   -d '{"account_id":1,"topic":"llm"}'
 ```
@@ -426,7 +442,7 @@ curl -s -X POST http://localhost:8000/jobs/publish-now \
 6. Ver status:
 
 ```bash
-curl -s "http://localhost:8000/jobs?limit=20"
+curl -s "http://localhost:8000/linkedin/jobs?limit=20"
 ```
 
 ## 9) Automacao LeetCode -> GitHub
