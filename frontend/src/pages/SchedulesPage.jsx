@@ -18,8 +18,8 @@ const LC_CREATE = {
   time_local: "",
   timezone: "America/Sao_Paulo",
   selection_strategy: "random",
-  difficulty_policy: "free_any",
-  max_attempts: 5,
+  difficulty_policy: "random",
+  max_attempts: 2,
   is_active: true,
 };
 
@@ -70,7 +70,7 @@ export default function SchedulesPage() {
 
   const rows = useMemo(() => {
     const accountById = new Map(accounts.map((item) => [item.id, item.name]));
-    const repoById = new Map(repositories.map((item) => [item.id, item.repo_ssh_url]));
+    const repoById = new Map(repositories.map((item) => [item.id, extractRepoName(item.repo_ssh_url)]));
     const liRows = linkedinSchedules.map((item) => ({
       id: item.id,
       uid: `li-${item.id}`,
@@ -293,7 +293,13 @@ function CreateScheduleModal({
           </form>
         ) : (
           <form className="space-y-3" onSubmit={createLeetcode}>
-            <SelectField label="Repositorio" value={lcForm.repository_id} onChange={(value) => setLcForm((prev) => ({ ...prev, repository_id: value }))} isDarkMode={isDarkMode} options={repositories.map((item) => ({ value: String(item.id), label: item.repo_ssh_url }))} />
+            <SelectField
+              label="Repositorio"
+              value={lcForm.repository_id}
+              onChange={(value) => setLcForm((prev) => ({ ...prev, repository_id: value }))}
+              isDarkMode={isDarkMode}
+              options={repositories.map((item) => ({ value: String(item.id), label: extractRepoName(item.repo_ssh_url) }))}
+            />
             <InputField label="Cron expression" value={lcForm.cron_expr} onChange={(value) => setLcForm((prev) => ({ ...prev, cron_expr: value }))} isDarkMode={isDarkMode} />
             <div className="grid gap-3 grid-cols-2">
               <SelectField label="Dia da semana" value={lcForm.day_of_week} onChange={(value) => setLcForm((prev) => ({ ...prev, day_of_week: value }))} isDarkMode={isDarkMode} options={WEEK_DAYS} />
@@ -301,8 +307,29 @@ function CreateScheduleModal({
             </div>
             <InputField label="Timezone" value={lcForm.timezone} onChange={(value) => setLcForm((prev) => ({ ...prev, timezone: value }))} isDarkMode={isDarkMode} />
             <div className="grid gap-3 grid-cols-2">
-              <SelectField label="Selection strategy" value={lcForm.selection_strategy} onChange={(value) => setLcForm((prev) => ({ ...prev, selection_strategy: value }))} isDarkMode={isDarkMode} options={[{ value: "random", label: "random" }, { value: "easy_first", label: "easy_first" }, { value: "sequential", label: "sequential" }]} />
-              <SelectField label="Difficulty policy" value={lcForm.difficulty_policy} onChange={(value) => setLcForm((prev) => ({ ...prev, difficulty_policy: value }))} isDarkMode={isDarkMode} options={[{ value: "free_any", label: "free_any" }, { value: "free_easy", label: "free_easy" }, { value: "free_easy_medium", label: "free_easy_medium" }]} />
+              <SelectField
+                label="Selection strategy"
+                value={lcForm.selection_strategy}
+                onChange={(value) => setLcForm((prev) => ({ ...prev, selection_strategy: value }))}
+                isDarkMode={isDarkMode}
+                options={[
+                  { value: "random", label: "Aleatorio" },
+                  { value: "easy_first", label: "Faceis primeiro" },
+                  { value: "sequential", label: "Sequencial" },
+                ]}
+              />
+              <SelectField
+                label="Difficulty policy"
+                value={lcForm.difficulty_policy}
+                onChange={(value) => setLcForm((prev) => ({ ...prev, difficulty_policy: value }))}
+                isDarkMode={isDarkMode}
+                options={[
+                  { value: "random", label: "Dificuldade Aleatoria" },
+                  { value: "easy", label: "Faceis" },
+                  { value: "medium", label: "Medio" },
+                  { value: "hard", label: "Dificil" },
+                ]}
+              />
             </div>
             <InputField type="number" label="Max attempts" value={String(lcForm.max_attempts)} onChange={(value) => setLcForm((prev) => ({ ...prev, max_attempts: Number(value) || 1 }))} isDarkMode={isDarkMode} />
             <CheckField label="Ativo" checked={lcForm.is_active} onChange={(checked) => setLcForm((prev) => ({ ...prev, is_active: checked }))} isDarkMode={isDarkMode} />
@@ -368,6 +395,15 @@ function formatDate(value) {
   } catch {
     return "-";
   }
+}
+
+function extractRepoName(repoSshUrl) {
+  const raw = String(repoSshUrl || "").trim();
+  const match = raw.match(/^[^:]+:([^/]+)\/(.+?)(?:\.git)?$/);
+  if (match) return match[2];
+  const slash = raw.lastIndexOf("/");
+  const name = slash >= 0 ? raw.slice(slash + 1) : raw;
+  return name.replace(/\.git$/, "") || raw;
 }
 
 function getErrorMessage(err, fallback) {
