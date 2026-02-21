@@ -412,7 +412,7 @@ def _process_single_leetcode_job(db: Session, job: LeetCodeJob) -> None:
         ssh_private_key=ssh_private_key,
         ssh_passphrase=ssh_passphrase,
         selection_strategy=(job.selection_strategy or repository.selection_strategy or "random"),
-        difficulty_policy=(job.difficulty_policy or repository.difficulty_policy or "free_any"),
+        difficulty_policy=(job.difficulty_policy or repository.difficulty_policy or "random"),
         completed_frontend_ids=completed_ids,
         forced_problem_slug=job.problem_slug,
         max_attempts=job.max_attempts,

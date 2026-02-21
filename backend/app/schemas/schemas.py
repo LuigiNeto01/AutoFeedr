@@ -198,7 +198,7 @@ class GitHubRepositoryCreate(BaseModel):
     commit_author_name: str = Field(min_length=2, max_length=120)
     commit_author_email: str = Field(min_length=5, max_length=255)
     selection_strategy: str = "random"
-    difficulty_policy: str = "free_any"
+    difficulty_policy: str = "random"
     is_active: bool = True
 
     @field_validator("repo_ssh_url")

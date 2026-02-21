@@ -48,7 +48,12 @@ query questionContent($titleSlug: String!) {
 """
 
 SELECTION_STRATEGIES = {"random", "easy_first", "sequential"}
-DIFFICULTY_POLICIES = {"free_any", "free_easy", "free_easy_medium"}
+DIFFICULTY_POLICIES = {"random", "easy", "medium", "hard", "free_any", "free_easy", "free_easy_medium"}
+LEGACY_DIFFICULTY_POLICY_MAP = {
+    "free_any": "random",
+    "free_easy": "easy",
+    "free_easy_medium": "medium",
+}
 
 
 class LeetCodeProvider:
@@ -168,7 +173,8 @@ class LeetCodeProvider:
             return detail
 
         strategy = selection_strategy if selection_strategy in SELECTION_STRATEGIES else "random"
-        policy = difficulty_policy if difficulty_policy in DIFFICULTY_POLICIES else "free_any"
+        raw_policy = difficulty_policy if difficulty_policy in DIFFICULTY_POLICIES else "random"
+        policy = LEGACY_DIFFICULTY_POLICY_MAP.get(raw_policy, raw_policy)
 
         candidates = self._collect_candidates(policy=policy, completed_frontend_ids=completed_frontend_ids)
         if not candidates:
@@ -203,7 +209,7 @@ class LeetCodeProvider:
                         continue
                     all_items.append(item)
 
-        if policy == "free_any":
+        if policy == "random":
             for page in range(max_pages):
                 items = self.list_questions(skip=page * page_size, limit=page_size)
                 if not items:
@@ -240,10 +246,12 @@ class LeetCodeProvider:
         return random.choice(candidates)
 
     def _difficulty_order(self, policy: str) -> list[str | None]:
-        if policy == "free_easy":
+        if policy == "easy":
             return ["EASY"]
-        if policy == "free_easy_medium":
-            return ["EASY", "MEDIUM"]
+        if policy == "medium":
+            return ["MEDIUM"]
+        if policy == "hard":
+            return ["HARD"]
         return []
 
 
