@@ -11,10 +11,11 @@ __pycache__/
 build/
 develop-eggs/
 dist/
+node_modules/
 downloads/
 eggs/
 .eggs/
-lib/
+
 lib64/
 parts/
 sdist/
@@ -200,6 +201,10 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# Keep frontend shared lib tracked
+!frontend/src/shared/lib/
+!frontend/src/shared/lib/**
 
 # Marimo
 marimo/_static/
