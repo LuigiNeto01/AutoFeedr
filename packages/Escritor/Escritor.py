@@ -1,5 +1,5 @@
 from typing import Optional
-from .src.prompt import PROMPT_GERACAO_POST, PROMPT_TRADUCAO
+from .src.prompt import PROMPT_GERACAO_POST
 from .src.utils import conectar_ia, gerar_resposta
 
 MAX_SECTION_CHARS = 1400
@@ -50,8 +50,15 @@ def gerar_post(
     post_pt_br = _fit_text_limit(post_pt_br, MAX_SECTION_CHARS)
     print("Post em PT-BR gerado.")
 
+    # Sem prompt de traducao, publica apenas em portugues.
+    prompt_template_translation = (prompt_translation or "").strip()
+    if not prompt_template_translation:
+        post = _fit_text_limit(post_pt_br, MAX_LINKEDIN_POST_CHARS)
+        print("Prompt de traducao ausente. Publicando apenas em PT-BR.")
+        print(f"Post final montado ({len(post)} caracteres).")
+        return post
+
     # Traduz o post para ingles (US) mantendo o estilo.
-    prompt_template_translation = prompt_translation or PROMPT_TRADUCAO
     prompt_traducao = prompt_template_translation.format(post_portugues=post_pt_br)
     try:
         post_en_us = gerar_resposta(modelo, prompt_traducao)
