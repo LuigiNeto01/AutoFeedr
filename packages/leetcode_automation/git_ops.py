@@ -252,10 +252,13 @@ def _update_progress_file(
     problem_difficulty: str,
     solution_rel_path: str,
 ) -> None:
+    readme_path = repo_path / "README.md"
     progress_path = repo_path / "PROGRESS.md"
     legacy_metadata_path = repo_path / "metadata" / "solved_problems.json"
 
-    items = _load_progress_items(progress_path)
+    items: list[dict[str, str]] = []
+    items.extend(_load_progress_items_from_readme(readme_path))
+    items.extend(_load_progress_items(progress_path))
     legacy_items = _load_legacy_json_items(legacy_metadata_path)
     if legacy_items:
         items.extend(legacy_items)
@@ -285,7 +288,8 @@ def _update_progress_file(
         }
     )
 
-    progress_path.write_text(_render_progress_markdown(items), encoding="utf-8")
+    progress_markdown = _render_progress_markdown(items)
+    _write_progress_into_readme(readme_path, progress_markdown)
 
     if legacy_metadata_path.exists():
         legacy_metadata_path.unlink()
@@ -293,6 +297,8 @@ def _update_progress_file(
             legacy_metadata_path.parent.rmdir()
         except OSError:
             pass
+    if progress_path.exists():
+        progress_path.unlink()
 
 
 def _load_legacy_json_items(metadata_path: Path) -> list[dict[str, str]]:
@@ -336,6 +342,20 @@ def _load_progress_items(progress_path: Path) -> list[dict[str, str]]:
     if not progress_path.exists():
         return []
     text = progress_path.read_text(encoding="utf-8")
+    return _parse_progress_items_from_markdown(text)
+
+
+def _load_progress_items_from_readme(readme_path: Path) -> list[dict[str, str]]:
+    if not readme_path.exists():
+        return []
+    text = readme_path.read_text(encoding="utf-8")
+    section = _extract_readme_progress_section(text)
+    if not section:
+        return []
+    return _parse_progress_items_from_markdown(section)
+
+
+def _parse_progress_items_from_markdown(text: str) -> list[dict[str, str]]:
     lines = text.splitlines()
     items: list[dict[str, str]] = []
     current_difficulty = ""
@@ -343,13 +363,13 @@ def _load_progress_items(progress_path: Path) -> list[dict[str, str]]:
 
     for raw_line in lines:
         line = raw_line.rstrip()
-        header_match = re.match(r"^##\s+(Easy|Medium|Hard)\s*$", line, re.IGNORECASE)
+        header_match = re.match(r"^#{2,3}\s+(Easy|Medium|Hard)\s*$", line, re.IGNORECASE)
         if header_match:
             current_difficulty = header_match.group(1).lower()
             current = None
             continue
 
-        item_match = re.match(r"^- \[#([^\]]+)\s+(.+)\]\(https://leetcode\.com/problems/([^/]+)/?\)\s*$", line)
+        item_match = re.match(r"^- \[#([0-9A-Za-z_-]+)\s+(.+)\]\(https://leetcode\.com/problems/([^/]+)/?\)\s*$", line)
         if item_match:
             current = {
                 "question_id": item_match.group(1).strip(),
@@ -379,6 +399,35 @@ def _load_progress_items(progress_path: Path) -> list[dict[str, str]]:
             continue
 
     return [item for item in items if item.get("question_id") and item.get("slug") and item.get("path")]
+
+
+def _extract_readme_progress_section(text: str) -> str:
+    match = re.search(
+        r"(?mis)^##\s+LeetCode\s+Progress\s*$\n?(.*?)(?=^##\s+|\Z)",
+        text,
+    )
+    if not match:
+        return ""
+    return "## LeetCode Progress\n\n" + match.group(1).strip("\n") + "\n"
+
+
+def _write_progress_into_readme(readme_path: Path, progress_markdown: str) -> None:
+    if readme_path.exists():
+        original = readme_path.read_text(encoding="utf-8")
+    else:
+        original = "# LeetCode Solutions\n"
+
+    replacement = progress_markdown.strip() + "\n"
+    pattern = re.compile(r"(?mis)^##\s+LeetCode\s+Progress\s*$\n?.*?(?=^##\s+|\Z)")
+
+    if pattern.search(original):
+        updated = pattern.sub(replacement, original, count=1)
+    else:
+        base = original.rstrip()
+        separator = "\n\n" if base else ""
+        updated = f"{base}{separator}{replacement}"
+
+    readme_path.write_text(updated.rstrip() + "\n", encoding="utf-8")
 
 
 def _render_progress_markdown(items: list[dict[str, str]]) -> str:
@@ -414,14 +463,14 @@ def _render_progress_markdown(items: list[dict[str, str]]) -> str:
 
     total = sum(len(grouped[d]) for d in ordered_difficulties)
     lines: list[str] = [
-        "# LeetCode Progress",
+        "## LeetCode Progress",
         "",
         f"Total de questoes resolvidas: {total}",
         "",
     ]
 
     for difficulty in ordered_difficulties:
-        lines.append(f"## {difficulty.title()}")
+        lines.append(f"### {difficulty.title()}")
         lines.append("")
         if not grouped[difficulty]:
             lines.append("- Nenhuma questao registrada ainda.")
