@@ -21,9 +21,14 @@ function resolveApiBase() {
 
   if (!selected) return fallback;
 
+  if (selected.startsWith("/")) {
+    return selected.replace(/\/+$/, "") || "/";
+  }
+
   try {
     const parsed = new URL(selected);
-    return `${parsed.protocol}//${parsed.host}`;
+    const path = parsed.pathname?.replace(/\/+$/, "") || "";
+    return `${parsed.protocol}//${parsed.host}${path}`;
   } catch {
     return fallback;
   }
@@ -33,7 +38,9 @@ export const API_BASE = resolveApiBase();
 
 async function request(path, init) {
   const token = getAccessToken();
-  const response = await fetch(`${API_BASE}${path}`, {
+  const base = API_BASE.endsWith("/") ? API_BASE.slice(0, -1) : API_BASE;
+  const targetPath = path.startsWith("/") ? path : `/${path}`;
+  const response = await fetch(`${base}${targetPath}`, {
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
