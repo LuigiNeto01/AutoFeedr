@@ -1,6 +1,6 @@
 from typing import Optional
-from .src.prompt import PROMPT_GERACAO_POST, PROMPT_TRADUCAO
-from .src.utils import conectar_gemini, gerar_resposta
+from .src.prompt import PROMPT_GERACAO_POST
+from .src.utils import conectar_ia, gerar_resposta
 
 MAX_SECTION_CHARS = 1400
 MAX_LINKEDIN_POST_CHARS = 3000
@@ -34,28 +34,36 @@ def gerar_post(
     informacoes: str,
     prompt_generation: str | None = None,
     prompt_translation: str | None = None,
+    openai_api_key: str | None = None,
 ) -> Optional[str]:
 
-    print("Conectando ao Gemini...")
-    modelo = conectar_gemini()
+    print("Conectando ao provedor de IA...")
+    modelo = conectar_ia(openai_api_key=openai_api_key)
 
     # Gera o post em portugues a partir do prompt base.
     prompt_template_pt = prompt_generation or PROMPT_GERACAO_POST
     prompt_pt_br = prompt_template_pt.format(informacoes=informacoes)
-    post_pt_br = gerar_resposta(modelo, prompt_pt_br)
-    if not post_pt_br:
-        print("Falha ao gerar post em PT-BR. Abortando.")
-        return None
+    try:
+        post_pt_br = gerar_resposta(modelo, prompt_pt_br)
+    except Exception as exc:
+        raise RuntimeError(f"Falha ao gerar post em PT-BR: {exc}") from exc
     post_pt_br = _fit_text_limit(post_pt_br, MAX_SECTION_CHARS)
     print("Post em PT-BR gerado.")
 
+    # Sem prompt de traducao, publica apenas em portugues.
+    prompt_template_translation = (prompt_translation or "").strip()
+    if not prompt_template_translation:
+        post = _fit_text_limit(post_pt_br, MAX_LINKEDIN_POST_CHARS)
+        print("Prompt de traducao ausente. Publicando apenas em PT-BR.")
+        print(f"Post final montado ({len(post)} caracteres).")
+        return post
+
     # Traduz o post para ingles (US) mantendo o estilo.
-    prompt_template_translation = prompt_translation or PROMPT_TRADUCAO
     prompt_traducao = prompt_template_translation.format(post_portugues=post_pt_br)
-    post_en_us = gerar_resposta(modelo, prompt_traducao)
-    if not post_en_us:
-        print("Falha ao gerar post em EN-US. Abortando.")
-        return None
+    try:
+        post_en_us = gerar_resposta(modelo, prompt_traducao)
+    except Exception as exc:
+        raise RuntimeError(f"Falha ao gerar post em EN-US: {exc}") from exc
     post_en_us = _fit_text_limit(post_en_us, MAX_SECTION_CHARS)
     print("Post em EN-US gerado.")
 

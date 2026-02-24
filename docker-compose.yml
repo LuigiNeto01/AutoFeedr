@@ -26,7 +26,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./:/app
     restart: unless-stopped
@@ -54,12 +54,36 @@ services:
       dockerfile: Dockerfile
     container_name: autofeedr-frontend
     environment:
-      VITE_API_BASE: http://localhost:8000
+      VITE_API_BASE: ${FRONTEND_API_BASE:-http://localhost:8000}
     ports:
-      - "5173:5173"
+      - "127.0.0.1:5173:5173"
     depends_on:
       - backend
     restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: autofeedr-nginx
+    environment:
+      APP_DOMAIN: autofeedr.eyelid.com.br
+    depends_on:
+      - frontend
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx/templates:/etc/nginx/templates:ro
+      - ./infra/certbot/conf:/etc/letsencrypt
+      - ./infra/certbot/www:/var/www/certbot
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot:latest
+    profiles: ["ops"]
+    volumes:
+      - ./infra/certbot/conf:/etc/letsencrypt
+      - ./infra/certbot/www:/var/www/certbot
 
 volumes:
   postgres_data:

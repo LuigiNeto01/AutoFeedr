@@ -1,13 +1,10 @@
 # AutoFeedr - Referencia Operacional Atual (2026-02-08)
 
 ## 1) Intuito do projeto
-O AutoFeedr e uma plataforma para operacao de postagens tecnicas no LinkedIn com multiplas contas, combinando:
+O AutoFeedr e uma plataforma com dois fluxos principais:
 
-1. Cadastro de contas LinkedIn.
-2. Agenda recorrente por conta com timezone.
-3. Publicacao imediata sob demanda (tema, URL de paper ou texto).
-4. Geracao de post via Gemini com traducao e limite para LinkedIn.
-5. Execucao automatica por worker com retries.
+1. LinkedIn: cadastro de contas, agenda recorrente, publicacao imediata e geracao via provedor configuravel de IA.
+2. LeetCode -> GitHub: selecao de desafios nao pagos, geracao/correcao de solucao Python, testes e commit automatizado.
 
 ## 2) Arquitetura atual (MVP com base solida)
 
@@ -18,11 +15,11 @@ Servicos principais:
    - Criptografa tokens LinkedIn no banco com Fernet.
 2. `worker/` (Python)
    - Enfileira jobs de agendas usando `croniter` + timezone por agenda.
-   - Processa jobs pendentes com retry automatico.
+   - Processa jobs pendentes de LinkedIn e LeetCode com retry automatico.
 3. `frontend/` (React + Vite)
    - Painel web com sidebar e 4 telas: Home, Contas, Agenda, Publicar.
 4. `postgres` (Docker)
-   - Persistencia de contas, agendas, jobs, logs de job e deduplicacao de execucao por minuto.
+   - Persistencia de contas, agendas, jobs, logs e deduplicacao por execucao/problema.
 
 ## 3) Fluxo de negocio
 
@@ -86,41 +83,72 @@ Arquivo base: `.env` (modelo em `.env.example`).
 
 Variaveis principais:
 
-1. `GEMINI_API_KEY`
-2. `GEMINI_MODEL`
-3. `TOKEN_ENCRYPTION_KEY`
-4. `DATABASE_URL`
-5. `CORS_ORIGINS`
-6. `DEFAULT_TIMEZONE`
-7. `WORKER_POLL_SECONDS`
-8. `WORKER_MAX_ATTEMPTS`
+1. `LLM_PROVIDER` (`openai` ou `gemini`)
+2. `OPENAI_API_KEY` e `OPENAI_MODEL` (quando `LLM_PROVIDER=openai`)
+3. `GEMINI_API_KEY` e `GEMINI_MODEL` (quando `LLM_PROVIDER=gemini`)
+4. `TOKEN_ENCRYPTION_KEY`
+5. `DATABASE_URL`
+6. `CORS_ORIGINS`
+7. `DEFAULT_TIMEZONE`
+8. `WORKER_POLL_SECONDS`
+9. `WORKER_MAX_ATTEMPTS`
 
-## 8) Deploy e operacao (ambiente conhecido)
+## 8) Deploy em producao (eyelid)
 
-Host de execucao informado:
+Ambiente de producao atual:
 
-1. Maquina: `eyelid`
-2. Caminho: `/opt/AutoFeedr`
-3. Orquestracao: `docker compose`
-4. Estrategia adotada: deploy por Git (`develop`) + rebuild de containers
+1. Host: `eyelid`
+2. Path: `/opt/AutoFeedr`
+3. Branch de deploy: `github_develop`
+4. Orquestracao: `docker compose`
 
-Fluxo usado:
+Passo a passo de deploy:
 
-1. `git push origin develop`
-2. `ssh eyelid`
-3. `cd /opt/AutoFeedr`
-4. `git fetch origin develop && git reset --hard origin/develop`
-5. `docker compose up -d --build`
+1. Local:
+   - `git push origin github_develop`
+2. Servidor:
+   - `ssh eyelid`
+   - `cd /opt/AutoFeedr`
+   - `git pull --ff-only origin github_develop`
+   - `docker compose up -d --build backend worker frontend`
+3. Validacao rapida:
+   - `curl http://localhost:8000/health`
+   - `docker compose ps`
 
-## 9) Riscos e pontos de atencao
+Observacoes operacionais:
+
+1. Evitar `git reset --hard` em deploy padrao.
+2. `TOKEN_ENCRYPTION_KEY` precisa permanecer estavel no servidor.
+3. Frontend em producao usa tunel local para acesso remoto:
+   - `ssh -N -L 5173:localhost:5173 -L 8001:localhost:8000 eyelid`
+   - Abrir `http://localhost:5173`
+
+## 9) Diferencas entre ambientes
+
+`local (dev)`:
+
+1. Execucao no workspace local (`docker compose up -d --build`).
+2. API local normalmente em `http://localhost:8000`.
+3. Frontend local normalmente em `http://localhost:5173`.
+4. Pode usar `.env` de desenvolvimento com credenciais de teste.
+
+`producao (eyelid)`:
+
+1. Codigo roda em `/opt/AutoFeedr`.
+2. Acesso geralmente via tunel SSH (`5173` frontend + `8001` API).
+3. `.env` do servidor pode divergir do local (segredos reais).
+4. Qualquer troca de `TOKEN_ENCRYPTION_KEY` invalida segredos criptografados ja salvos.
+5. Limites de quota do provider de IA impactam jobs reais (LinkedIn e LeetCode).
+
+## 10) Riscos e pontos de atencao
 
 1. Painel ainda sem autenticacao/autorizacao.
 2. Renovacao de token LinkedIn ainda manual.
-3. Dependencia de APIs externas (arXiv, Gemini, LinkedIn).
+3. Dependencia de APIs externas (arXiv, provedor de IA, LinkedIn).
 4. Falhas de rede externas podem aumentar latencia de processamento.
 5. Necessario manter `TOKEN_ENCRYPTION_KEY` estavel para nao invalidar tokens armazenados.
 
-## 10) Proximos passos naturais
+## 11) Proximos passos naturais
 
 1. Auth para painel/API (mesmo single-user).
 2. Endpoint para excluir agenda/conta com seguranca.

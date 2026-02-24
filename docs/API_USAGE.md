@@ -124,21 +124,37 @@ Exemplo:
 curl -s http://localhost:8000/prompts/defaults
 ```
 
+### 4.2.1 Migracao de endpoints LinkedIn (antigo -> novo)
+
+As rotas antigas sem namespace foram descontinuadas. Use apenas os novos endpoints com prefixo `/linkedin`.
+
+| Endpoint antigo | Endpoint novo |
+| --- | --- |
+| `GET /accounts` | `GET /linkedin/accounts` |
+| `POST /accounts` | `POST /linkedin/accounts` |
+| `PUT /accounts/{account_id}` | `PUT /linkedin/accounts/{account_id}` |
+| `DELETE /accounts/{account_id}` | `DELETE /linkedin/accounts/{account_id}` |
+| `GET /schedules` | `GET /linkedin/schedules` |
+| `POST /schedules` | `POST /linkedin/schedules` |
+| `PUT /schedules/{schedule_id}` | `PUT /linkedin/schedules/{schedule_id}` |
+| `POST /jobs/publish-now` | `POST /linkedin/jobs/run-now` |
+| `GET /jobs?limit=...` | `GET /linkedin/jobs?limit=...` |
+
 ### 4.3 Listar contas
 
-`GET /accounts`
+`GET /linkedin/accounts`
 
 Resposta: array de `AccountOut`.
 
 Exemplo:
 
 ```bash
-curl -s http://localhost:8000/accounts
+curl -s http://localhost:8000/linkedin/accounts
 ```
 
 ### 4.4 Criar conta
 
-`POST /accounts`
+`POST /linkedin/accounts`
 
 Request body:
 
@@ -163,7 +179,7 @@ Validacoes:
 Exemplo:
 
 ```bash
-curl -s -X POST http://localhost:8000/accounts \
+curl -s -X POST http://localhost:8000/linkedin/accounts \
   -H "Content-Type: application/json" \
   -d '{
     "name":"Luigi",
@@ -175,7 +191,7 @@ curl -s -X POST http://localhost:8000/accounts \
 
 ### 4.5 Atualizar conta
 
-`PUT /accounts/{account_id}`
+`PUT /linkedin/accounts/{account_id}`
 
 Campos permitidos no body:
 
@@ -188,7 +204,7 @@ Campos permitidos no body:
 Exemplo:
 
 ```bash
-curl -s -X PUT http://localhost:8000/accounts/1 \
+curl -s -X PUT http://localhost:8000/linkedin/accounts/1 \
   -H "Content-Type: application/json" \
   -d '{
     "prompt_generation":"Novo prompt de geracao",
@@ -199,19 +215,19 @@ curl -s -X PUT http://localhost:8000/accounts/1 \
 
 ### 4.6 Listar agendas
 
-`GET /schedules`
+`GET /linkedin/schedules`
 
 Resposta: array de `ScheduleOut`.
 
 Exemplo:
 
 ```bash
-curl -s http://localhost:8000/schedules
+curl -s http://localhost:8000/linkedin/schedules
 ```
 
 ### 4.7 Criar agenda
 
-`POST /schedules`
+`POST /linkedin/schedules`
 
 Opcao A (recomendada): `day_of_week` + `time_local`.
 
@@ -249,7 +265,7 @@ Validacoes:
 Exemplo:
 
 ```bash
-curl -s -X POST http://localhost:8000/schedules \
+curl -s -X POST http://localhost:8000/linkedin/schedules \
   -H "Content-Type: application/json" \
   -d '{
     "account_id":1,
@@ -263,7 +279,7 @@ curl -s -X POST http://localhost:8000/schedules \
 
 ### 4.8 Atualizar agenda
 
-`PUT /schedules/{schedule_id}`
+`PUT /linkedin/schedules/{schedule_id}`
 
 Regras:
 
@@ -273,7 +289,7 @@ Regras:
 Exemplo:
 
 ```bash
-curl -s -X PUT http://localhost:8000/schedules/1 \
+curl -s -X PUT http://localhost:8000/linkedin/schedules/1 \
   -H "Content-Type: application/json" \
   -d '{
     "topic":"LLM",
@@ -286,7 +302,7 @@ curl -s -X PUT http://localhost:8000/schedules/1 \
 
 ### 4.9 Publicacao imediata
 
-`POST /jobs/publish-now`
+`POST /linkedin/jobs/run-now`
 
 Request body:
 
@@ -312,7 +328,7 @@ Exemplos:
 Por tema:
 
 ```bash
-curl -s -X POST http://localhost:8000/jobs/publish-now \
+curl -s -X POST http://localhost:8000/linkedin/jobs/run-now \
   -H "Content-Type: application/json" \
   -d '{
     "account_id":1,
@@ -323,7 +339,7 @@ curl -s -X POST http://localhost:8000/jobs/publish-now \
 Por URL de paper:
 
 ```bash
-curl -s -X POST http://localhost:8000/jobs/publish-now \
+curl -s -X POST http://localhost:8000/linkedin/jobs/run-now \
   -H "Content-Type: application/json" \
   -d '{
     "account_id":1,
@@ -334,7 +350,7 @@ curl -s -X POST http://localhost:8000/jobs/publish-now \
 Por texto de paper:
 
 ```bash
-curl -s -X POST http://localhost:8000/jobs/publish-now \
+curl -s -X POST http://localhost:8000/linkedin/jobs/run-now \
   -H "Content-Type: application/json" \
   -d '{
     "account_id":1,
@@ -344,7 +360,7 @@ curl -s -X POST http://localhost:8000/jobs/publish-now \
 
 ### 4.10 Listar jobs
 
-`GET /jobs?limit=50`
+`GET /linkedin/jobs?limit=50`
 
 Query params:
 
@@ -353,15 +369,15 @@ Query params:
 Exemplo:
 
 ```bash
-curl -s "http://localhost:8000/jobs?limit=20"
+curl -s "http://localhost:8000/linkedin/jobs?limit=20"
 ```
 
 ## 5) Erros comuns e diagnostico
 
 1. `404 Conta nao encontrada`
-   - `account_id` inexistente em `/schedules` ou `/jobs/publish-now`.
+   - `account_id` inexistente em `/schedules` ou `/linkedin/jobs/run-now`.
 2. `409 Conta com esse nome ja existe`
-   - Nome duplicado em `POST /accounts`.
+   - Nome duplicado em `POST /linkedin/accounts`.
 3. `422 Informe cron_expr ou (day_of_week + time_local)`
    - Body incompleto em criacao de agenda.
 4. `422 Informe topic, paper_url ou paper_text`
@@ -402,7 +418,7 @@ curl -s http://localhost:8000/health
 3. Cadastrar conta:
 
 ```bash
-curl -s -X POST http://localhost:8000/accounts \
+curl -s -X POST http://localhost:8000/linkedin/accounts \
   -H "Content-Type: application/json" \
   -d '{"name":"Conta1","token":"token_aqui","urn":"urn_aqui"}'
 ```
@@ -410,7 +426,7 @@ curl -s -X POST http://localhost:8000/accounts \
 4. Criar agenda:
 
 ```bash
-curl -s -X POST http://localhost:8000/schedules \
+curl -s -X POST http://localhost:8000/linkedin/schedules \
   -H "Content-Type: application/json" \
   -d '{"account_id":1,"topic":"machine learning","day_of_week":2,"time_local":"12:00","timezone":"America/Sao_Paulo"}'
 ```
@@ -418,7 +434,7 @@ curl -s -X POST http://localhost:8000/schedules \
 5. Publicar agora:
 
 ```bash
-curl -s -X POST http://localhost:8000/jobs/publish-now \
+curl -s -X POST http://localhost:8000/linkedin/jobs/run-now \
   -H "Content-Type: application/json" \
   -d '{"account_id":1,"topic":"llm"}'
 ```
@@ -426,5 +442,138 @@ curl -s -X POST http://localhost:8000/jobs/publish-now \
 6. Ver status:
 
 ```bash
-curl -s "http://localhost:8000/jobs?limit=20"
+curl -s "http://localhost:8000/linkedin/jobs?limit=20"
 ```
+
+## 9) Automacao LeetCode -> GitHub
+
+### 9.1 Cadastrar conta GitHub (SSH)
+
+`POST /github/accounts`
+
+Request body:
+
+```json
+{
+  "name": "github-main",
+  "ssh_private_key": "-----BEGIN OPENSSH PRIVATE KEY-----...",
+  "ssh_passphrase": null,
+  "is_active": true
+}
+```
+
+Observacoes:
+
+1. `ssh_private_key` e input-only (nunca retorna na API).
+2. Chave e passphrase sao criptografadas no banco.
+
+### 9.2 Listar/atualizar contas GitHub
+
+1. `GET /github/accounts`
+2. `PUT /github/accounts/{account_id}`
+
+Body de update aceita:
+
+1. `ssh_private_key`
+2. `ssh_passphrase`
+3. `is_active`
+
+### 9.3 Cadastrar repositorio GitHub
+
+`POST /github/repositories`
+
+```json
+{
+  "account_id": 1,
+  "repo_ssh_url": "git@github.com:owner/leetcode-sandbox.git",
+  "default_branch": "main",
+  "solutions_dir": "problems",
+  "commit_author_name": "AutoFeedr Bot",
+  "commit_author_email": "bot@example.com",
+  "selection_strategy": "random",
+  "difficulty_policy": "free_any",
+  "is_active": true
+}
+```
+
+Endpoints relacionados:
+
+1. `GET /github/repositories`
+2. `PUT /github/repositories/{repository_id}`
+
+### 9.4 Criar job imediato LeetCode
+
+`POST /leetcode/jobs/run-now`
+
+```json
+{
+  "repository_id": 1,
+  "selection_strategy": "random",
+  "difficulty_policy": "free_any",
+  "problem_slug": null,
+  "max_attempts": 2
+}
+```
+
+Campos opcionais:
+
+1. `selection_strategy`: `random`, `easy_first`, `sequential`
+2. `difficulty_policy`: `free_any`, `free_easy`, `free_easy_medium`
+3. `problem_slug`: forca problema especifico
+4. `max_attempts`: limite de tentativas de correcao
+
+### 9.5 Consultar jobs LeetCode
+
+1. `GET /leetcode/jobs?limit=50&repository_id=1`
+2. `GET /leetcode/jobs/{job_id}`
+3. `GET /leetcode/jobs/{job_id}/logs`
+
+Status possiveis:
+
+1. `pending`
+2. `running`
+3. `retry`
+4. `success`
+5. `failed`
+
+### 9.6 Agendar automacao LeetCode
+
+1. `POST /leetcode/schedules`
+2. `GET /leetcode/schedules`
+3. `PUT /leetcode/schedules/{schedule_id}`
+
+Body de criacao:
+
+```json
+{
+  "repository_id": 1,
+  "day_of_week": 1,
+  "time_local": "08:30",
+  "timezone": "America/Sao_Paulo",
+  "selection_strategy": "random",
+  "difficulty_policy": "free_any",
+  "max_attempts": 2,
+  "is_active": true
+}
+```
+
+Regra:
+
+1. Envie `cron_expr` ou `day_of_week + time_local`.
+
+### 9.7 Consultar problemas ja resolvidos
+
+`GET /leetcode/completed?repository_id=1&limit=100`
+
+Retorna historico usado para deduplicacao de desafios no mesmo repositorio.
+
+## 10) Configuracoes adicionais de runtime
+
+Novas variaveis em `.env`:
+
+1. `LEETCODE_GRAPHQL_URL`
+2. `LEETCODE_HTTP_TIMEOUT_SECONDS`
+3. `LEETCODE_DEFAULT_MAX_ATTEMPTS`
+4. `LEETCODE_TEST_TIMEOUT_SECONDS`
+5. `LEETCODE_RETRY_BASE_MINUTES`
+6. `WORKER_TMP_DIR`
