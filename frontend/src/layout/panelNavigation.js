@@ -26,6 +26,11 @@ export const PANEL_NAV_ITEMS = [
       { key: "prompts", label: "Prompts", href: "/configuracoes/prompts" },
     ],
   },
+  {
+    key: "admin",
+    label: "Admin",
+    children: [{ key: "admin-usuarios", label: "Usuarios", href: "/admin/usuarios" }],
+  },
 ];
 
 function flatten(items) {

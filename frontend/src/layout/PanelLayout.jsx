@@ -21,6 +21,10 @@ export default function PanelLayout() {
 
   const activeKey = getActiveKey(location.pathname);
   const pageTitle = useMemo(() => getActiveLabel(location.pathname), [location.pathname]);
+  const navItems = useMemo(() => {
+    const isAdmin = (user?.role ?? "user") === "admin";
+    return isAdmin ? PANEL_NAV_ITEMS : PANEL_NAV_ITEMS.filter((item) => item.key !== "admin");
+  }, [user]);
 
   const handleSelect = (item) => {
     if (item?.key === "contas-chave-api") {
@@ -65,7 +69,7 @@ export default function PanelLayout() {
         <Sidebar
           open={isSidebarExpanded}
           onToggle={() => setIsSidebarExpanded((value) => !value)}
-          items={PANEL_NAV_ITEMS}
+          items={navItems}
           activeKey={activeKey}
           onSelect={handleSelect}
           onLogout={handleLogout}
@@ -124,7 +128,7 @@ export default function PanelLayout() {
             <Sidebar
               open
               variant="mobile"
-              items={PANEL_NAV_ITEMS}
+              items={navItems}
               activeKey={activeKey}
               onSelect={handleSelect}
               onLogout={handleLogout}

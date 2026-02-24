@@ -10,6 +10,7 @@ import {
   HiOutlineXMark,
   HiOutlineChevronDown,
   HiOutlineChevronRight,
+  HiOutlineShieldCheck,
 } from "react-icons/hi2";
 
 const APP_NAME = "AutoFeedr";
@@ -28,6 +29,8 @@ const ICONS = {
   agendamentos: HiOutlineDocumentText,
   configuracoes: HiOutlineCog6Tooth,
   prompts: HiOutlineDocumentText,
+  admin: HiOutlineShieldCheck,
+  "admin-usuarios": HiOutlineShieldCheck,
 };
 
 function LogoArea({

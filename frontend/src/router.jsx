@@ -8,6 +8,7 @@ import ResultsPage from "./pages/ResultsPage";
 import RunNowPage from "./pages/RunNowPage";
 import SchedulesPage from "./pages/SchedulesPage";
 import PromptsPage from "./pages/PromptsPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PanelLayout from "./layout/PanelLayout";
 
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
           { path: "/resultados", element: <ResultsPage /> },
           { path: "/configuracoes", element: <Navigate to="/configuracoes/prompts" replace /> },
           { path: "/configuracoes/prompts", element: <PromptsPage /> },
+          { path: "/admin/usuarios", element: <AdminUsersPage /> },
         ],
       },
     ],

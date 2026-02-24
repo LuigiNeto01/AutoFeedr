@@ -33,6 +33,10 @@ from app.schemas.schemas import (
     AuthRegister,
     AuthTokenOut,
     AuthUserOut,
+    AdminUserOut,
+    AdminUserOverviewCounts,
+    AdminUserOverviewOut,
+    AdminUserUpdate,
     GitHubAccountCreate,
     GitHubAccountOut,
     GitHubAccountUpdate,
@@ -63,6 +67,7 @@ router = APIRouter()
 
 SELECTION_STRATEGIES = {"random", "easy_first", "sequential"}
 DIFFICULTY_POLICIES = {"random", "easy", "medium", "hard"}
+USER_ROLES = {"user", "admin"}
 LEGACY_DIFFICULTY_POLICY_MAP = {
     "free_any": "random",
     "free_easy": "easy",
@@ -150,6 +155,16 @@ def get_current_user(
     return user
 
 
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    role = (current_user.role or "user").strip().lower()
+    if role not in USER_ROLES:
+        current_user.role = "user"
+        raise HTTPException(status_code=403, detail="Permissao insuficiente.")
+    if role != "admin":
+        raise HTTPException(status_code=403, detail="Acesso restrito a administradores.")
+    return current_user
+
+
 def _build_auth_response(db: Session, user: User) -> AuthTokenOut:
     raw_token = create_access_token()
     token = AuthToken(
@@ -176,7 +191,13 @@ def auth_register(payload: AuthRegister, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=409, detail="Usuario com esse email ja existe.")
 
-    user = User(email=email, password_hash=hash_password(payload.password), is_active=True)
+    is_first_user = db.query(User.id).count() == 0
+    user = User(
+        email=email,
+        password_hash=hash_password(payload.password),
+        role="admin" if is_first_user else "user",
+        is_active=True,
+    )
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -208,6 +229,170 @@ def auth_logout(
 @router.get("/auth/me", response_model=AuthUserOut)
 def auth_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.get("/admin/users", response_model=list[AdminUserOut])
+def admin_list_users(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    return db.query(User).order_by(User.id.asc()).all()
+
+
+@router.get("/admin/users/{user_id}/overview", response_model=AdminUserOverviewOut)
+def admin_user_overview(
+    user_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario nao encontrado.")
+
+    linkedin_accounts = (
+        db.query(LinkedinAccount)
+        .filter(LinkedinAccount.owner_user_id == user_id)
+        .order_by(LinkedinAccount.id.desc())
+        .all()
+    )
+    github_accounts = (
+        db.query(GitHubAccount)
+        .filter(GitHubAccount.owner_user_id == user_id)
+        .order_by(GitHubAccount.id.desc())
+        .all()
+    )
+    github_repositories = (
+        db.query(GitHubRepository)
+        .filter(GitHubRepository.owner_user_id == user_id)
+        .order_by(GitHubRepository.id.desc())
+        .all()
+    )
+    linkedin_schedules = (
+        db.query(Schedule)
+        .join(LinkedinAccount, LinkedinAccount.id == Schedule.account_id)
+        .filter(LinkedinAccount.owner_user_id == user_id)
+        .order_by(Schedule.id.desc())
+        .all()
+    )
+    leetcode_schedules = (
+        db.query(LeetCodeSchedule)
+        .join(GitHubRepository, GitHubRepository.id == LeetCodeSchedule.repository_id)
+        .filter(GitHubRepository.owner_user_id == user_id)
+        .order_by(LeetCodeSchedule.id.desc())
+        .all()
+    )
+    recent_linkedin_jobs = (
+        db.query(Job)
+        .join(LinkedinAccount, LinkedinAccount.id == Job.account_id)
+        .filter(LinkedinAccount.owner_user_id == user_id)
+        .order_by(Job.id.desc())
+        .limit(10)
+        .all()
+    )
+    recent_leetcode_jobs = (
+        db.query(LeetCodeJob)
+        .join(GitHubRepository, GitHubRepository.id == LeetCodeJob.repository_id)
+        .filter(GitHubRepository.owner_user_id == user_id)
+        .order_by(LeetCodeJob.id.desc())
+        .limit(10)
+        .all()
+    )
+
+    counts = AdminUserOverviewCounts(
+        linkedin_accounts=len(linkedin_accounts),
+        github_accounts=len(github_accounts),
+        github_repositories=len(github_repositories),
+        linkedin_schedules=len(linkedin_schedules),
+        leetcode_schedules=len(leetcode_schedules),
+        linkedin_jobs=(
+            db.query(Job)
+            .join(LinkedinAccount, LinkedinAccount.id == Job.account_id)
+            .filter(LinkedinAccount.owner_user_id == user_id)
+            .count()
+        ),
+        leetcode_jobs=(
+            db.query(LeetCodeJob)
+            .join(GitHubRepository, GitHubRepository.id == LeetCodeJob.repository_id)
+            .filter(GitHubRepository.owner_user_id == user_id)
+            .count()
+        ),
+    )
+
+    return AdminUserOverviewOut(
+        user=AdminUserOut.model_validate(user),
+        counts=counts,
+        linkedin_accounts=linkedin_accounts,
+        github_accounts=github_accounts,
+        github_repositories=github_repositories,
+        linkedin_schedules=linkedin_schedules,
+        leetcode_schedules=leetcode_schedules,
+        recent_linkedin_jobs=recent_linkedin_jobs,
+        recent_leetcode_jobs=recent_leetcode_jobs,
+    )
+
+
+@router.put("/admin/users/{user_id}", response_model=AdminUserOut)
+def admin_update_user(
+    user_id: int,
+    payload: AdminUserUpdate,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario nao encontrado.")
+
+    new_role = payload.role if payload.role is not None else user.role
+    new_is_active = payload.is_active if payload.is_active is not None else user.is_active
+
+    if (new_role == "user" or new_is_active is False) and user.role == "admin" and user.is_active:
+        active_admins_count = (
+            db.query(User)
+            .filter(User.role == "admin", User.is_active.is_(True))
+            .count()
+        )
+        if active_admins_count <= 1:
+            raise HTTPException(status_code=422, detail="Nao e permitido remover/desativar o ultimo admin ativo.")
+
+    if payload.role is not None:
+        user.role = new_role
+
+    if payload.is_active is not None:
+        if user.id == admin_user.id and payload.is_active is False:
+            raise HTTPException(status_code=422, detail="Nao e permitido desativar o proprio usuario admin.")
+        user.is_active = payload.is_active
+        if payload.is_active is False:
+            db.query(AuthToken).filter(AuthToken.user_id == user.id, AuthToken.revoked.is_(False)).update(
+                {AuthToken.revoked: True},
+                synchronize_session=False,
+            )
+            linkedin_account_ids = [
+                row[0]
+                for row in db.query(LinkedinAccount.id)
+                .filter(LinkedinAccount.owner_user_id == user.id)
+                .all()
+            ]
+            if linkedin_account_ids:
+                db.query(Schedule).filter(Schedule.account_id.in_(linkedin_account_ids)).update(
+                    {Schedule.is_active: False},
+                    synchronize_session=False,
+                )
+
+            github_repo_ids = [
+                row[0]
+                for row in db.query(GitHubRepository.id)
+                .filter(GitHubRepository.owner_user_id == user.id)
+                .all()
+            ]
+            if github_repo_ids:
+                db.query(LeetCodeSchedule).filter(LeetCodeSchedule.repository_id.in_(github_repo_ids)).update(
+                    {LeetCodeSchedule.is_active: False},
+                    synchronize_session=False,
+                )
+
+    db.commit()
+    db.refresh(user)
+    return user
 
 
 @router.get("/auth/openai-key")

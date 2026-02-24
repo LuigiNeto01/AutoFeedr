@@ -22,6 +22,7 @@ class AuthLogin(BaseModel):
 class AuthUserOut(BaseModel):
     id: int
     email: str
+    role: str
     is_active: bool
     has_openai_api_key: bool
     created_at: datetime
@@ -373,3 +374,53 @@ class LeetCodeCompletedOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class AdminUserOut(BaseModel):
+    id: int
+    email: str
+    role: str
+    is_active: bool
+    has_openai_api_key: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AdminUserUpdate(BaseModel):
+    role: str | None = None
+    is_active: bool | None = None
+
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        normalized = value.strip().lower()
+        if normalized not in {"user", "admin"}:
+            raise ValueError("role deve ser 'user' ou 'admin'")
+        return normalized
+
+
+class AdminUserOverviewCounts(BaseModel):
+    linkedin_accounts: int
+    github_accounts: int
+    github_repositories: int
+    linkedin_schedules: int
+    leetcode_schedules: int
+    linkedin_jobs: int
+    leetcode_jobs: int
+
+
+class AdminUserOverviewOut(BaseModel):
+    user: AdminUserOut
+    counts: AdminUserOverviewCounts
+    linkedin_accounts: list[AccountOut]
+    github_accounts: list[GitHubAccountOut]
+    github_repositories: list[GitHubRepositoryOut]
+    linkedin_schedules: list[ScheduleOut]
+    leetcode_schedules: list[LeetCodeScheduleOut]
+    recent_linkedin_jobs: list[JobOut]
+    recent_leetcode_jobs: list[LeetCodeJobOut]

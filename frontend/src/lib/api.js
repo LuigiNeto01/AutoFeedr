@@ -150,6 +150,10 @@ export const api = {
   updateGithubRepository: (id, payload) =>
     request(`/github/repositories/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
   deleteGithubRepository: (id) => request(`/github/repositories/${id}`, { method: "DELETE" }),
+  adminUsers: () => request("/admin/users"),
+  adminUserOverview: (id) => request(`/admin/users/${id}/overview`),
+  adminUpdateUser: (id, payload) =>
+    request(`/admin/users/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
   logout: async () => {
     try {
       await request("/auth/logout", { method: "POST" });
