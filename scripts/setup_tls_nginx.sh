@@ -43,14 +43,14 @@ else
 fi
 
 echo "[tls] requesting/updating Let's Encrypt certificate"
-if [[ ! -f "${RENEWAL_CONF}" && -d "${CERT_DIR}" ]]; then
+if [[ ! -s "${RENEWAL_CONF}" && -d "${CERT_DIR}" ]]; then
   echo "[tls] removing temporary certificate path before certbot issuance"
   rm -rf "${ROOT_DIR}/infra/certbot/conf/live/${DOMAIN}" \
          "${ROOT_DIR}/infra/certbot/conf/archive/${DOMAIN}"
 fi
 docker compose --profile ops run --rm --no-deps certbot "${CERTBOT_ARGS[@]}"
 
-if [[ ! -f "${ROOT_DIR}/infra/certbot/conf/renewal/${DOMAIN}.conf" ]]; then
+if [[ ! -s "${ROOT_DIR}/infra/certbot/conf/renewal/${DOMAIN}.conf" ]]; then
   ALT_DIR="$(ls -d "${ROOT_DIR}/infra/certbot/conf/live/${DOMAIN}"-* 2>/dev/null | sort | tail -n 1 || true)"
   if [[ -n "${ALT_DIR}" && -d "${ALT_DIR}" ]]; then
     echo "[tls] creating compatibility alias for nginx cert path"
