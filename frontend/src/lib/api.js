@@ -21,9 +21,14 @@ function resolveApiBase() {
 
   if (!selected) return fallback;
 
+  if (selected.startsWith("/")) {
+    return selected.replace(/\/+$/, "") || "/";
+  }
+
   try {
     const parsed = new URL(selected);
-    return `${parsed.protocol}//${parsed.host}`;
+    const path = parsed.pathname?.replace(/\/+$/, "") || "";
+    return `${parsed.protocol}//${parsed.host}${path}`;
   } catch {
     return fallback;
   }
@@ -33,7 +38,9 @@ export const API_BASE = resolveApiBase();
 
 async function request(path, init) {
   const token = getAccessToken();
-  const response = await fetch(`${API_BASE}${path}`, {
+  const base = API_BASE.endsWith("/") ? API_BASE.slice(0, -1) : API_BASE;
+  const targetPath = path.startsWith("/") ? path : `/${path}`;
+  const response = await fetch(`${base}${targetPath}`, {
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -103,10 +110,19 @@ export const api = {
       return request(`/schedules/${id}`, { method: "PUT", body: JSON.stringify(payload) });
     }
   },
+  deleteLinkedinSchedule: async (id) => {
+    try {
+      return await request(`/linkedin/schedules/${id}`, { method: "DELETE" });
+    } catch {
+      return request(`/schedules/${id}`, { method: "DELETE" });
+    }
+  },
   createLeetcodeSchedule: (payload) =>
     request("/leetcode/schedules", { method: "POST", body: JSON.stringify(payload) }),
   updateLeetcodeSchedule: (id, payload) =>
     request(`/leetcode/schedules/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  deleteLeetcodeSchedule: (id) =>
+    request(`/leetcode/schedules/${id}`, { method: "DELETE" }),
   runLinkedinNow: async (payload) => {
     try {
       return await request("/linkedin/jobs/run-now", { method: "POST", body: JSON.stringify(payload) });
@@ -116,12 +132,12 @@ export const api = {
   },
   runLeetcodeNow: (payload) =>
     request("/leetcode/jobs/run-now", { method: "POST", body: JSON.stringify(payload) }),
-  linkedinAccounts: () => request("/accounts"),
+  linkedinAccounts: () => request("/linkedin/accounts"),
   createLinkedinAccount: (payload) =>
-    request("/accounts", { method: "POST", body: JSON.stringify(payload) }),
+    request("/linkedin/accounts", { method: "POST", body: JSON.stringify(payload) }),
   updateLinkedinAccount: (id, payload) =>
-    request(`/accounts/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
-  deleteLinkedinAccount: (id) => request(`/accounts/${id}`, { method: "DELETE" }),
+    request(`/linkedin/accounts/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  deleteLinkedinAccount: (id) => request(`/linkedin/accounts/${id}`, { method: "DELETE" }),
   githubAccounts: () => request("/github/accounts"),
   createGithubAccount: (payload) =>
     request("/github/accounts", { method: "POST", body: JSON.stringify(payload) }),

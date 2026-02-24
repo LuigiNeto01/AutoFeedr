@@ -19,8 +19,10 @@ from app.models.models import (
     LeetCodeJob,
     LeetCodeJobLog,
     LeetCodeSchedule,
+    LeetCodeScheduleRun,
     LinkedinAccount,
     Schedule,
+    ScheduleRun,
     User,
 )
 from app.schemas.schemas import (
@@ -60,7 +62,12 @@ from packages.leetcode_automation.prompts import PROMPT_GENERATE_SOLUTION
 router = APIRouter()
 
 SELECTION_STRATEGIES = {"random", "easy_first", "sequential"}
-DIFFICULTY_POLICIES = {"free_any", "free_easy", "free_easy_medium"}
+DIFFICULTY_POLICIES = {"random", "easy", "medium", "hard"}
+LEGACY_DIFFICULTY_POLICY_MAP = {
+    "free_any": "random",
+    "free_easy": "easy",
+    "free_easy_medium": "medium",
+}
 
 
 def _build_simple_weekly_cron(day_of_week: int, time_local: str) -> str:
@@ -98,6 +105,8 @@ def _normalize_difficulty_policy(value: str | None) -> str | None:
     if value is None:
         return None
     normalized = value.strip()
+    if normalized in LEGACY_DIFFICULTY_POLICY_MAP:
+        normalized = LEGACY_DIFFICULTY_POLICY_MAP[normalized]
     if normalized not in DIFFICULTY_POLICIES:
         raise HTTPException(
             status_code=422,
@@ -451,6 +460,27 @@ def update_schedule(
     return schedule
 
 
+@router.delete("/linkedin/schedules/{schedule_id}")
+def delete_schedule(
+    schedule_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    schedule = (
+        db.query(Schedule)
+        .join(LinkedinAccount, LinkedinAccount.id == Schedule.account_id)
+        .filter(Schedule.id == schedule_id, LinkedinAccount.owner_user_id == current_user.id)
+        .first()
+    )
+    if not schedule:
+        raise HTTPException(status_code=404, detail="Agenda nao encontrada.")
+
+    db.query(ScheduleRun).filter(ScheduleRun.schedule_id == schedule_id).delete(synchronize_session=False)
+    db.delete(schedule)
+    db.commit()
+    return {"ok": True}
+
+
 @router.post("/linkedin/jobs/run-now", response_model=JobOut)
 def publish_now(
     payload: ManualJobCreate,
@@ -634,7 +664,7 @@ def create_github_repository(
         raise HTTPException(status_code=409, detail="Repositorio GitHub ja cadastrado.")
 
     selection_strategy = _normalize_selection_strategy(payload.selection_strategy) or "random"
-    difficulty_policy = _normalize_difficulty_policy(payload.difficulty_policy) or "free_any"
+    difficulty_policy = _normalize_difficulty_policy(payload.difficulty_policy) or "random"
 
     repository = GitHubRepository(
         owner_user_id=current_user.id,
@@ -902,6 +932,33 @@ def update_leetcode_schedule(
     db.commit()
     db.refresh(schedule)
     return schedule
+
+
+@router.delete("/leetcode/schedules/{schedule_id}")
+def delete_leetcode_schedule(
+    schedule_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    schedule = (
+        db.query(LeetCodeSchedule)
+        .join(GitHubRepository, GitHubRepository.id == LeetCodeSchedule.repository_id)
+        .filter(LeetCodeSchedule.id == schedule_id, GitHubRepository.owner_user_id == current_user.id)
+        .first()
+    )
+    if not schedule:
+        raise HTTPException(status_code=404, detail="Agenda LeetCode nao encontrada.")
+
+    db.query(LeetCodeJob).filter(LeetCodeJob.schedule_id == schedule_id).update(
+        {LeetCodeJob.schedule_id: None},
+        synchronize_session=False,
+    )
+    db.query(LeetCodeScheduleRun).filter(LeetCodeScheduleRun.schedule_id == schedule_id).delete(
+        synchronize_session=False
+    )
+    db.delete(schedule)
+    db.commit()
+    return {"ok": True}
 
 
 @router.get("/leetcode/completed", response_model=list[LeetCodeCompletedOut])

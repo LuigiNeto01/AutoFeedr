@@ -182,7 +182,7 @@ class GitHubRepository(Base):
     commit_author_name: Mapped[str] = mapped_column(String(120))
     commit_author_email: Mapped[str] = mapped_column(String(255))
     selection_strategy: Mapped[str] = mapped_column(String(32), default="random")
-    difficulty_policy: Mapped[str] = mapped_column(String(32), default="free_any")
+    difficulty_policy: Mapped[str] = mapped_column(String(32), default="random")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

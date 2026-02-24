@@ -10,9 +10,9 @@ const INITIAL_FORM = {
   paper_text: "",
   repository_id: "",
   selection_strategy: "random",
-  difficulty_policy: "free_any",
+  difficulty_policy: "random",
   problem_slug: "",
-  max_attempts: 5,
+  max_attempts: 2,
 };
 
 export default function RunNowPage() {
@@ -216,10 +216,40 @@ function RunNowModal({ isDarkMode, form, setForm, accounts, repositories, onClos
             </>
           ) : (
             <>
-              <SelectField label="Repositorio GitHub" value={String(form.repository_id)} onChange={(value) => setForm((prev) => ({ ...prev, repository_id: value }))} isDarkMode={isDarkMode} options={repositories.map((item) => ({ value: String(item.id), label: item.repo_ssh_url }))} />
+              <SelectField
+                label="Repositorio GitHub"
+                value={String(form.repository_id)}
+                onChange={(value) => setForm((prev) => ({ ...prev, repository_id: value }))}
+                isDarkMode={isDarkMode}
+                options={repositories.map((item) => ({
+                  value: String(item.id),
+                  label: extractRepoName(item.repo_ssh_url),
+                }))}
+              />
               <div className="grid gap-3 md:grid-cols-2">
-                <SelectField label="Selection strategy" value={form.selection_strategy} onChange={(value) => setForm((prev) => ({ ...prev, selection_strategy: value }))} isDarkMode={isDarkMode} options={[{ value: "random", label: "random" }, { value: "easy_first", label: "easy_first" }, { value: "sequential", label: "sequential" }]} />
-                <SelectField label="Difficulty policy" value={form.difficulty_policy} onChange={(value) => setForm((prev) => ({ ...prev, difficulty_policy: value }))} isDarkMode={isDarkMode} options={[{ value: "free_any", label: "free_any" }, { value: "free_easy", label: "free_easy" }, { value: "free_easy_medium", label: "free_easy_medium" }]} />
+                <SelectField
+                  label="Selection strategy"
+                  value={form.selection_strategy}
+                  onChange={(value) => setForm((prev) => ({ ...prev, selection_strategy: value }))}
+                  isDarkMode={isDarkMode}
+                  options={[
+                    { value: "random", label: "Aleatorio" },
+                    { value: "easy_first", label: "Faceis primeiro" },
+                    { value: "sequential", label: "Sequencial" },
+                  ]}
+                />
+                <SelectField
+                  label="Difficulty policy"
+                  value={form.difficulty_policy}
+                  onChange={(value) => setForm((prev) => ({ ...prev, difficulty_policy: value }))}
+                  isDarkMode={isDarkMode}
+                  options={[
+                    { value: "random", label: "Dificuldade Aleatoria" },
+                    { value: "easy", label: "Faceis" },
+                    { value: "medium", label: "Medio" },
+                    { value: "hard", label: "Dificil" },
+                  ]}
+                />
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <InputField label="Problem slug (opcional)" value={form.problem_slug} onChange={(value) => setForm((prev) => ({ ...prev, problem_slug: value }))} isDarkMode={isDarkMode} />
@@ -236,6 +266,15 @@ function RunNowModal({ isDarkMode, form, setForm, accounts, repositories, onClos
       </div>
     </div>
   );
+}
+
+function extractRepoName(repoSshUrl) {
+  const raw = String(repoSshUrl || "").trim();
+  const match = raw.match(/^[^:]+:([^/]+)\/(.+?)(?:\.git)?$/);
+  if (match) return match[2];
+  const slash = raw.lastIndexOf("/");
+  const name = slash >= 0 ? raw.slice(slash + 1) : raw;
+  return name.replace(/\.git$/, "") || raw;
 }
 
 function Message({ tone, text, isDarkMode }) {

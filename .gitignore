@@ -210,3 +210,12 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+# Nginx / Let's Encrypt runtime files
+infra/certbot/conf/*
+infra/certbot/www/*
+!infra/certbot/conf/.gitkeep
+!infra/certbot/www/.gitkeep
+
+# Runtime/debug dumps
+data/temp_article.json
+packages/arxiv_reciver/data/temp_article.json
