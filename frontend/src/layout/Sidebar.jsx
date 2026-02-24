@@ -31,6 +31,8 @@ const ICONS = {
   prompts: HiOutlineDocumentText,
   admin: HiOutlineShieldCheck,
   "admin-usuarios": HiOutlineShieldCheck,
+  "admin-dashboard": HiOutlineShieldCheck,
+  "admin-execucoes": HiOutlineShieldCheck,
 };
 
 function LogoArea({

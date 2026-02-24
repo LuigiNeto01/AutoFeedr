@@ -154,6 +154,16 @@ export const api = {
   adminUserOverview: (id) => request(`/admin/users/${id}/overview`),
   adminUpdateUser: (id, payload) =>
     request(`/admin/users/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  adminAuditLogs: (limit = 100) => request(`/admin/audit-logs?limit=${limit}`),
+  adminJobs: ({ limit = 100, status, job_type, user_id } = {}) => {
+    const search = new URLSearchParams();
+    search.set("limit", String(limit));
+    if (status) search.set("status", status);
+    if (job_type) search.set("job_type", job_type);
+    if (user_id) search.set("user_id", String(user_id));
+    return request(`/admin/jobs?${search.toString()}`);
+  },
+  adminMetricsOverview: () => request("/admin/metrics/overview"),
   logout: async () => {
     try {
       await request("/auth/logout", { method: "POST" });

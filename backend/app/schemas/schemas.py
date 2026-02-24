@@ -424,3 +424,59 @@ class AdminUserOverviewOut(BaseModel):
     leetcode_schedules: list[LeetCodeScheduleOut]
     recent_linkedin_jobs: list[JobOut]
     recent_leetcode_jobs: list[LeetCodeJobOut]
+
+
+class AdminAuditLogOut(BaseModel):
+    id: int
+    admin_user_id: int | None
+    action: str
+    target_user_id: int | None
+    details: str | None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AdminUnifiedJobOut(BaseModel):
+    job_type: str
+    job_id: int
+    owner_user_id: int | None
+    owner_user_email: str | None
+    status: str
+    source: str
+    attempts: int
+    max_attempts: int
+    subject: str | None
+    target: str | None
+    error_message: str | None
+    scheduled_for: datetime | None
+    next_retry_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class AdminMetricsStatusItem(BaseModel):
+    status: str
+    count: int
+
+
+class AdminMetricsFlowItem(BaseModel):
+    flow: str
+    failed_24h: int
+    success_24h: int
+
+
+class AdminMetricsOverviewOut(BaseModel):
+    users_total: int
+    users_active: int
+    linkedin_accounts_total: int
+    github_accounts_total: int
+    github_repositories_total: int
+    linkedin_schedules_active: int
+    leetcode_schedules_active: int
+    linkedin_jobs_24h: int
+    leetcode_jobs_24h: int
+    total_jobs_24h: int
+    statuses_24h: list[AdminMetricsStatusItem]
+    flows_24h: list[AdminMetricsFlowItem]

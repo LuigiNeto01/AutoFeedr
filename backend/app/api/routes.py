@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+import json
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.exc import IntegrityError
@@ -11,6 +12,7 @@ from app.core.security import build_fernet, encrypt_text
 from app.core.settings import settings
 from app.db.session import get_db
 from app.models.models import (
+    AdminAuditLog,
     AuthToken,
     GitHubAccount,
     GitHubRepository,
@@ -33,6 +35,11 @@ from app.schemas.schemas import (
     AuthRegister,
     AuthTokenOut,
     AuthUserOut,
+    AdminAuditLogOut,
+    AdminMetricsFlowItem,
+    AdminMetricsOverviewOut,
+    AdminMetricsStatusItem,
+    AdminUnifiedJobOut,
     AdminUserOut,
     AdminUserOverviewCounts,
     AdminUserOverviewOut,
@@ -163,6 +170,24 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if role != "admin":
         raise HTTPException(status_code=403, detail="Acesso restrito a administradores.")
     return current_user
+
+
+def _write_admin_audit_log(
+    db: Session,
+    *,
+    admin_user_id: int | None,
+    action: str,
+    target_user_id: int | None = None,
+    details: dict | None = None,
+) -> None:
+    db.add(
+        AdminAuditLog(
+            admin_user_id=admin_user_id,
+            action=action,
+            target_user_id=target_user_id,
+            details=json.dumps(details, ensure_ascii=True, sort_keys=True) if details else None,
+        )
+    )
 
 
 def _build_auth_response(db: Session, user: User) -> AuthTokenOut:
@@ -344,6 +369,8 @@ def admin_update_user(
 
     new_role = payload.role if payload.role is not None else user.role
     new_is_active = payload.is_active if payload.is_active is not None else user.is_active
+    before_role = user.role
+    before_is_active = user.is_active
 
     if (new_role == "user" or new_is_active is False) and user.role == "admin" and user.is_active:
         active_admins_count = (
@@ -390,9 +417,162 @@ def admin_update_user(
                     synchronize_session=False,
                 )
 
+    if before_role != user.role or before_is_active != user.is_active:
+        _write_admin_audit_log(
+            db,
+            admin_user_id=admin_user.id,
+            action="admin.user_update",
+            target_user_id=user.id,
+            details={
+                "before": {"role": before_role, "is_active": before_is_active},
+                "after": {"role": user.role, "is_active": user.is_active},
+            },
+        )
+
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.get("/admin/audit-logs", response_model=list[AdminAuditLogOut])
+def admin_list_audit_logs(
+    db: Session = Depends(get_db),
+    limit: int = 100,
+    _: User = Depends(require_admin),
+):
+    safe_limit = max(1, min(limit, 500))
+    return (
+        db.query(AdminAuditLog)
+        .order_by(AdminAuditLog.id.desc())
+        .limit(safe_limit)
+        .all()
+    )
+
+
+@router.get("/admin/jobs", response_model=list[AdminUnifiedJobOut])
+def admin_list_jobs(
+    db: Session = Depends(get_db),
+    limit: int = 100,
+    status: str | None = None,
+    job_type: str | None = None,
+    user_id: int | None = None,
+    _: User = Depends(require_admin),
+):
+    safe_limit = max(1, min(limit, 500))
+    items: list[dict] = []
+    normalized_type = (job_type or "").strip().lower() or None
+    normalized_status = (status or "").strip().lower() or None
+
+    if normalized_type in (None, "linkedin"):
+        linkedin_jobs_query = (
+            db.query(Job, LinkedinAccount, User)
+            .join(LinkedinAccount, LinkedinAccount.id == Job.account_id)
+            .outerjoin(User, User.id == LinkedinAccount.owner_user_id)
+        )
+        if normalized_status:
+            linkedin_jobs_query = linkedin_jobs_query.filter(Job.status == normalized_status)
+        if user_id is not None:
+            linkedin_jobs_query = linkedin_jobs_query.filter(LinkedinAccount.owner_user_id == user_id)
+        linkedin_jobs_rows = linkedin_jobs_query.order_by(Job.id.desc()).limit(safe_limit).all()
+        for job, account, owner in linkedin_jobs_rows:
+            items.append(
+                {
+                    "job_type": "linkedin",
+                    "job_id": job.id,
+                    "owner_user_id": owner.id if owner else account.owner_user_id,
+                    "owner_user_email": owner.email if owner else None,
+                    "status": job.status,
+                    "source": job.source,
+                    "attempts": job.attempts,
+                    "max_attempts": job.max_attempts,
+                    "subject": job.topic,
+                    "target": account.name if account else None,
+                    "error_message": job.error_message,
+                    "scheduled_for": job.scheduled_for,
+                    "next_retry_at": job.next_retry_at,
+                    "created_at": job.created_at,
+                    "updated_at": job.updated_at,
+                }
+            )
+
+    if normalized_type in (None, "leetcode"):
+        leetcode_jobs_query = (
+            db.query(LeetCodeJob, GitHubRepository, User)
+            .join(GitHubRepository, GitHubRepository.id == LeetCodeJob.repository_id)
+            .outerjoin(User, User.id == GitHubRepository.owner_user_id)
+        )
+        if normalized_status:
+            leetcode_jobs_query = leetcode_jobs_query.filter(LeetCodeJob.status == normalized_status)
+        if user_id is not None:
+            leetcode_jobs_query = leetcode_jobs_query.filter(GitHubRepository.owner_user_id == user_id)
+        leetcode_jobs_rows = leetcode_jobs_query.order_by(LeetCodeJob.id.desc()).limit(safe_limit).all()
+        for job, repository, owner in leetcode_jobs_rows:
+            subject = job.problem_title or job.problem_slug
+            items.append(
+                {
+                    "job_type": "leetcode",
+                    "job_id": job.id,
+                    "owner_user_id": owner.id if owner else repository.owner_user_id,
+                    "owner_user_email": owner.email if owner else None,
+                    "status": job.status,
+                    "source": job.source,
+                    "attempts": job.attempts,
+                    "max_attempts": job.max_attempts,
+                    "subject": subject,
+                    "target": repository.repo_ssh_url if repository else None,
+                    "error_message": job.error_message,
+                    "scheduled_for": job.scheduled_for,
+                    "next_retry_at": job.next_retry_at,
+                    "created_at": job.created_at,
+                    "updated_at": job.updated_at,
+                }
+            )
+
+    items.sort(key=lambda row: row.get("created_at") or datetime.min, reverse=True)
+    return items[:safe_limit]
+
+
+@router.get("/admin/metrics/overview", response_model=AdminMetricsOverviewOut)
+def admin_metrics_overview(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    now = datetime.now(UTC).replace(tzinfo=None)
+    since_24h = now - timedelta(hours=24)
+
+    statuses = ["pending", "running", "retry", "failed", "success"]
+    linkedin_24h_query = db.query(Job).filter(Job.created_at >= since_24h)
+    leetcode_24h_query = db.query(LeetCodeJob).filter(LeetCodeJob.created_at >= since_24h)
+
+    status_counts: dict[str, int] = {status: 0 for status in statuses}
+    for status_name in statuses:
+        status_counts[status_name] = (
+            linkedin_24h_query.filter(Job.status == status_name).count()
+            + leetcode_24h_query.filter(LeetCodeJob.status == status_name).count()
+        )
+
+    linkedin_success_24h = linkedin_24h_query.filter(Job.status == "success").count()
+    linkedin_failed_24h = linkedin_24h_query.filter(Job.status == "failed").count()
+    leetcode_success_24h = leetcode_24h_query.filter(LeetCodeJob.status == "success").count()
+    leetcode_failed_24h = leetcode_24h_query.filter(LeetCodeJob.status == "failed").count()
+
+    return AdminMetricsOverviewOut(
+        users_total=db.query(User).count(),
+        users_active=db.query(User).filter(User.is_active.is_(True)).count(),
+        linkedin_accounts_total=db.query(LinkedinAccount).count(),
+        github_accounts_total=db.query(GitHubAccount).count(),
+        github_repositories_total=db.query(GitHubRepository).count(),
+        linkedin_schedules_active=db.query(Schedule).filter(Schedule.is_active.is_(True)).count(),
+        leetcode_schedules_active=db.query(LeetCodeSchedule).filter(LeetCodeSchedule.is_active.is_(True)).count(),
+        linkedin_jobs_24h=linkedin_24h_query.count(),
+        leetcode_jobs_24h=leetcode_24h_query.count(),
+        total_jobs_24h=linkedin_24h_query.count() + leetcode_24h_query.count(),
+        statuses_24h=[AdminMetricsStatusItem(status=key, count=value) for key, value in status_counts.items()],
+        flows_24h=[
+            AdminMetricsFlowItem(flow="linkedin", failed_24h=linkedin_failed_24h, success_24h=linkedin_success_24h),
+            AdminMetricsFlowItem(flow="leetcode", failed_24h=leetcode_failed_24h, success_24h=leetcode_success_24h),
+        ],
+    )
 
 
 @router.get("/auth/openai-key")
