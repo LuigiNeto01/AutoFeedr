@@ -41,7 +41,7 @@ else
 fi
 
 echo "[tls] requesting/updating Let's Encrypt certificate"
-docker compose run --rm --no-deps --profile ops certbot "${CERTBOT_ARGS[@]}"
+docker compose --profile ops run --rm --no-deps certbot "${CERTBOT_ARGS[@]}"
 
 echo "[tls] reloading nginx"
 docker compose exec nginx nginx -s reload
