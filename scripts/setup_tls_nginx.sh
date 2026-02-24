@@ -7,6 +7,7 @@ EMAIL="${2:-}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CERT_DIR="${ROOT_DIR}/infra/certbot/conf/live/${DOMAIN}"
 WWW_DIR="${ROOT_DIR}/infra/certbot/www"
+RENEWAL_CONF="${ROOT_DIR}/infra/certbot/conf/renewal/${DOMAIN}.conf"
 
 mkdir -p "${CERT_DIR}" "${WWW_DIR}"
 
@@ -41,6 +42,11 @@ else
 fi
 
 echo "[tls] requesting/updating Let's Encrypt certificate"
+if [[ ! -f "${RENEWAL_CONF}" && -d "${CERT_DIR}" ]]; then
+  echo "[tls] removing temporary certificate path before certbot issuance"
+  rm -rf "${ROOT_DIR}/infra/certbot/conf/live/${DOMAIN}" \
+         "${ROOT_DIR}/infra/certbot/conf/archive/${DOMAIN}"
+fi
 docker compose --profile ops run --rm --no-deps certbot "${CERTBOT_ARGS[@]}"
 
 echo "[tls] reloading nginx"
