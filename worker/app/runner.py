@@ -239,7 +239,7 @@ def _build_content_input(job: Job) -> str:
         articles = get_article(
             topics=[job.topic],
             per_topic=1,
-            save_in_file=True,
+            save_in_file=False,
         )
         topic_articles = articles.get(job.topic, [])
         if not topic_articles:
