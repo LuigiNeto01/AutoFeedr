@@ -27,6 +27,7 @@ CERTBOT_ARGS=(
   certonly
   --webroot
   -w /var/www/certbot
+  --cert-name "${DOMAIN}"
   -d "${DOMAIN}"
   --rsa-key-size 4096
   --non-interactive
@@ -48,6 +49,17 @@ if [[ ! -f "${RENEWAL_CONF}" && -d "${CERT_DIR}" ]]; then
          "${ROOT_DIR}/infra/certbot/conf/archive/${DOMAIN}"
 fi
 docker compose --profile ops run --rm --no-deps certbot "${CERTBOT_ARGS[@]}"
+
+if [[ ! -f "${ROOT_DIR}/infra/certbot/conf/renewal/${DOMAIN}.conf" ]]; then
+  ALT_DIR="$(ls -d "${ROOT_DIR}/infra/certbot/conf/live/${DOMAIN}"-* 2>/dev/null | sort | tail -n 1 || true)"
+  if [[ -n "${ALT_DIR}" && -d "${ALT_DIR}" ]]; then
+    echo "[tls] creating compatibility alias for nginx cert path"
+    rm -rf "${CERT_DIR}"
+    mkdir -p "${CERT_DIR}"
+    ln -sf "../$(basename "${ALT_DIR}")/fullchain.pem" "${CERT_DIR}/fullchain.pem"
+    ln -sf "../$(basename "${ALT_DIR}")/privkey.pem" "${CERT_DIR}/privkey.pem"
+  fi
+fi
 
 echo "[tls] reloading nginx"
 docker compose exec nginx nginx -s reload
