@@ -33,6 +33,7 @@ const ICONS = {
   "admin-usuarios": HiOutlineShieldCheck,
   "admin-dashboard": HiOutlineShieldCheck,
   "admin-execucoes": HiOutlineShieldCheck,
+  "admin-consumos": HiOutlineShieldCheck,
 };
 
 function LogoArea({

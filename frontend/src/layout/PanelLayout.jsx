@@ -23,11 +23,26 @@ export default function PanelLayout() {
   const pageTitle = useMemo(() => getActiveLabel(location.pathname), [location.pathname]);
   const navItems = useMemo(() => {
     const isAdmin = (user?.role ?? "user") === "admin";
-    return isAdmin ? PANEL_NAV_ITEMS : PANEL_NAV_ITEMS.filter((item) => item.key !== "admin");
+    return PANEL_NAV_ITEMS
+      .filter((item) => (isAdmin ? true : item.key !== "admin"))
+      .map((item) => {
+        if (item.key !== "contas") return item;
+        return {
+          ...item,
+          children: (item.children || []).filter((child) =>
+            isAdmin ? true : child.key !== "contas-chave-api",
+          ),
+        };
+      });
   }, [user]);
 
   const handleSelect = (item) => {
     if (item?.key === "contas-chave-api") {
+      if ((user?.role ?? "user") !== "admin") {
+        navigate("/configuracoes/prompts");
+        setIsMobileSidebarOpen(false);
+        return;
+      }
       setIsApiKeyModalOpen(true);
       setIsMobileSidebarOpen(false);
       return;

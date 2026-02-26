@@ -9,8 +9,18 @@ from .prompts import PROMPT_FIX_SOLUTION, PROMPT_GENERATE_SOLUTION, PROMPT_GENER
 from .types import LeetCodeProblemDetail
 
 
-def get_llm_session(openai_api_key: str | None = None) -> AISession:
-    return conectar_ia(openai_api_key=openai_api_key)
+def get_llm_session(
+    openai_api_key: str | None = None,
+    model_override: str | None = None,
+    usage_callback=None,
+    usage_context: dict | None = None,
+) -> AISession:
+    return conectar_ia(
+        openai_api_key=openai_api_key,
+        model_override=model_override,
+        usage_callback=usage_callback,
+        usage_context=usage_context or {},
+    )
 
 
 def generate_solution_code(
@@ -32,7 +42,7 @@ def generate_solution_code(
     ai_error = ""
     output = ""
     try:
-        output = gerar_resposta(session, prompt)
+        output = gerar_resposta(session, prompt, usage_context={"operation": "leetcode_generate_solution"})
     except Exception as exc:
         ai_error = str(exc)
     if output:
@@ -59,7 +69,7 @@ def generate_tests_code(session: AISession, problem: LeetCodeProblemDetail, solu
     ai_error = ""
     output = ""
     try:
-        output = gerar_resposta(session, prompt)
+        output = gerar_resposta(session, prompt, usage_context={"operation": "leetcode_generate_tests"})
     except Exception as exc:
         ai_error = str(exc)
     if output:
@@ -89,7 +99,7 @@ def fix_solution_code(
         failure_output=failure_output,
     )
     try:
-        output = gerar_resposta(session, prompt)
+        output = gerar_resposta(session, prompt, usage_context={"operation": "leetcode_fix_solution"})
     except Exception as exc:
         raise RuntimeError(f"Falha ao corrigir solucao na IA. Causa: {exc}") from exc
     return extract_python_code(output)

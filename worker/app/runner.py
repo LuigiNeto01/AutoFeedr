@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import time
+from decimal import Decimal, InvalidOperation
 from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -19,12 +20,15 @@ from app.models.models import (
     GitHubRepository,
     Job,
     JobLog,
+    LLMModelConfig,
+    LLMUsageEvent,
     LeetCodeCompletedProblem,
     LeetCodeJob,
     LeetCodeJobLog,
     LeetCodeSchedule,
     LeetCodeScheduleRun,
     LinkedinAccount,
+    PlatformLLMSettings,
     Schedule,
     ScheduleRun,
     User,
@@ -49,6 +53,104 @@ def _log_job(db: Session, job_id: int, level: str, message: str) -> None:
 
 def _log_leetcode_job(db: Session, job_id: int, level: str, message: str) -> None:
     db.add(LeetCodeJobLog(job_id=job_id, level=level, message=message))
+
+
+def _safe_decimal(value: str | None) -> Decimal:
+    try:
+        return Decimal((value or "0").strip() or "0")
+    except (InvalidOperation, AttributeError):
+        return Decimal("0")
+
+
+def _get_platform_llm_settings(db: Session) -> PlatformLLMSettings | None:
+    return db.query(PlatformLLMSettings).filter(PlatformLLMSettings.id == 1, PlatformLLMSettings.is_active.is_(True)).first()
+
+
+def _resolve_llm_model_for_user(db: Session, owner: User, provider: str = "openai") -> str | None:
+    model_rows = (
+        db.query(LLMModelConfig)
+        .filter(LLMModelConfig.provider == provider, LLMModelConfig.is_enabled.is_(True))
+        .order_by(LLMModelConfig.model.asc())
+        .all()
+    )
+    allowed = [row.model for row in model_rows]
+    platform = _get_platform_llm_settings(db)
+    preferred = (owner.preferred_llm_model or "").strip() or None
+    if preferred and preferred in allowed:
+        return preferred
+    default_model = (platform.default_model if platform else None) or None
+    if default_model and default_model in allowed:
+        return default_model
+    return allowed[0] if allowed else default_model
+
+
+def _resolve_openai_credentials_for_user(db: Session, owner: User, fernet) -> tuple[str, str | None]:
+    platform = _get_platform_llm_settings(db)
+    if platform and platform.api_key_encrypted:
+        return decrypt_text(fernet, platform.api_key_encrypted), _resolve_llm_model_for_user(db, owner, provider="openai")
+    if owner.openai_api_key_encrypted:
+        # fallback de compatibilidade temporaria
+        return decrypt_text(fernet, owner.openai_api_key_encrypted), _resolve_llm_model_for_user(db, owner, provider="openai")
+    raise RuntimeError("Plataforma sem OPENAI_API_KEY central configurada.")
+
+
+def _make_llm_usage_logger(
+    db: Session,
+    *,
+    owner_user_id: int | None,
+    flow: str,
+    job_type: str,
+    job_id: int,
+):
+    pricing_rows = db.query(LLMModelConfig).filter(LLMModelConfig.provider == "openai").all()
+    pricing_map = {
+        row.model: {
+            "input": _safe_decimal(row.input_price_per_1m),
+            "cached_input": _safe_decimal(row.cached_input_price_per_1m),
+            "output": _safe_decimal(row.output_price_per_1m),
+        }
+        for row in pricing_rows
+    }
+
+    def _callback(event: dict) -> None:
+        model = str(event.get("model") or "")
+        input_tokens = int(event.get("input_tokens") or 0)
+        cached_input_tokens = int(event.get("cached_input_tokens") or 0)
+        output_tokens = int(event.get("output_tokens") or 0)
+        total_tokens = int(event.get("total_tokens") or (input_tokens + output_tokens))
+        provider = str(event.get("provider") or "openai")
+        operation = str(event.get("operation") or "unknown")
+        success = bool(event.get("success", True))
+        error_type = event.get("error_type")
+
+        prices = pricing_map.get(model, {"input": Decimal("0"), "cached_input": Decimal("0"), "output": Decimal("0")})
+        non_cached_input_tokens = max(0, input_tokens - cached_input_tokens)
+        estimated_cost = (
+            (Decimal(non_cached_input_tokens) / Decimal("1000000")) * prices["input"]
+            + (Decimal(cached_input_tokens) / Decimal("1000000")) * prices["cached_input"]
+            + (Decimal(output_tokens) / Decimal("1000000")) * prices["output"]
+        )
+
+        db.add(
+            LLMUsageEvent(
+                owner_user_id=owner_user_id,
+                provider=provider,
+                model=model,
+                flow=flow,
+                operation=operation,
+                input_tokens=input_tokens,
+                cached_input_tokens=cached_input_tokens,
+                output_tokens=output_tokens,
+                total_tokens=total_tokens,
+                estimated_cost_usd=str(estimated_cost.quantize(Decimal("0.00000001"))),
+                job_type=job_type,
+                job_id=job_id,
+                success=success,
+                error_type=str(error_type) if error_type else None,
+            )
+        )
+
+    return _callback
 
 
 def _should_run_schedule(cron_expr: str, local_now: datetime) -> bool:
@@ -264,9 +366,16 @@ def _process_job(db: Session, job: Job) -> None:
         raise RuntimeError("Conta LinkedIn sem usuario dono. Recadastre a conta.")
 
     owner = db.query(User).filter(User.id == account.owner_user_id, User.is_active.is_(True)).first()
-    if not owner or not owner.openai_api_key_encrypted:
-        raise RuntimeError("Usuario sem OPENAI_API_KEY cadastrada na aplicacao.")
-    user_openai_api_key = decrypt_text(fernet, owner.openai_api_key_encrypted)
+    if not owner:
+        raise RuntimeError("Usuario dono da conta LinkedIn nao encontrado ou inativo.")
+    user_openai_api_key, model_override = _resolve_openai_credentials_for_user(db, owner, fernet)
+    usage_callback = _make_llm_usage_logger(
+        db,
+        owner_user_id=owner.id,
+        flow="linkedin",
+        job_type="linkedin",
+        job_id=job.id,
+    )
 
     token = decrypt_text(fernet, account.token_encrypted)
     content_input = _build_content_input(job)
@@ -275,6 +384,9 @@ def _process_job(db: Session, job: Job) -> None:
         prompt_generation=account.prompt_generation,
         prompt_translation=account.prompt_translation,
         openai_api_key=user_openai_api_key,
+        model_override=model_override,
+        usage_callback=usage_callback,
+        usage_context_base={"flow": "linkedin", "job_type": "linkedin", "job_id": job.id},
     )
     if not post_text:
         raise RuntimeError("Falha ao gerar post com IA.")
@@ -380,14 +492,22 @@ def _process_single_leetcode_job(db: Session, job: LeetCodeJob) -> None:
     fernet = build_fernet(settings.token_encryption_key)
     user_prompt = None
     user_openai_api_key = None
+    model_override = None
+    usage_callback = None
     if repository.owner_user_id:
         owner = db.query(User).filter(User.id == repository.owner_user_id, User.is_active.is_(True)).first()
         if owner:
             user_prompt = owner.leetcode_solution_prompt
-            if owner.openai_api_key_encrypted:
-                user_openai_api_key = decrypt_text(fernet, owner.openai_api_key_encrypted)
+            user_openai_api_key, model_override = _resolve_openai_credentials_for_user(db, owner, fernet)
+            usage_callback = _make_llm_usage_logger(
+                db,
+                owner_user_id=owner.id,
+                flow="leetcode",
+                job_type="leetcode",
+                job_id=job.id,
+            )
     if not user_openai_api_key:
-        raise RuntimeError("Usuario sem OPENAI_API_KEY cadastrada na aplicacao.")
+        raise RuntimeError("Plataforma sem OPENAI_API_KEY central configurada.")
 
     ssh_private_key = decrypt_text(fernet, account.ssh_key_encrypted)
     ssh_passphrase = (
@@ -422,6 +542,9 @@ def _process_single_leetcode_job(db: Session, job: LeetCodeJob) -> None:
         tmp_root=settings.worker_tmp_dir,
         solution_prompt_template=user_prompt,
         openai_api_key=user_openai_api_key,
+        model_override=model_override,
+        usage_callback=usage_callback,
+        usage_context_base={"flow": "leetcode", "job_type": "leetcode", "job_id": job.id},
     )
 
     result = execute_leetcode_pipeline(payload)

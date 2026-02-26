@@ -35,16 +35,24 @@ def gerar_post(
     prompt_generation: str | None = None,
     prompt_translation: str | None = None,
     openai_api_key: str | None = None,
+    model_override: str | None = None,
+    usage_callback=None,
+    usage_context_base: dict | None = None,
 ) -> Optional[str]:
 
     print("Conectando ao provedor de IA...")
-    modelo = conectar_ia(openai_api_key=openai_api_key)
+    modelo = conectar_ia(
+        openai_api_key=openai_api_key,
+        model_override=model_override,
+        usage_callback=usage_callback,
+        usage_context=usage_context_base or {},
+    )
 
     # Gera o post em portugues a partir do prompt base.
     prompt_template_pt = prompt_generation or PROMPT_GERACAO_POST
     prompt_pt_br = prompt_template_pt.format(informacoes=informacoes)
     try:
-        post_pt_br = gerar_resposta(modelo, prompt_pt_br)
+        post_pt_br = gerar_resposta(modelo, prompt_pt_br, usage_context={"operation": "linkedin_generate_post_pt"})
     except Exception as exc:
         raise RuntimeError(f"Falha ao gerar post em PT-BR: {exc}") from exc
     post_pt_br = _fit_text_limit(post_pt_br, MAX_SECTION_CHARS)
@@ -61,7 +69,7 @@ def gerar_post(
     # Traduz o post para ingles (US) mantendo o estilo.
     prompt_traducao = prompt_template_translation.format(post_portugues=post_pt_br)
     try:
-        post_en_us = gerar_resposta(modelo, prompt_traducao)
+        post_en_us = gerar_resposta(modelo, prompt_traducao, usage_context={"operation": "linkedin_translate_post_en"})
     except Exception as exc:
         raise RuntimeError(f"Falha ao gerar post em EN-US: {exc}") from exc
     post_en_us = _fit_text_limit(post_en_us, MAX_SECTION_CHARS)

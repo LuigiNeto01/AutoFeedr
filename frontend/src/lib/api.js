@@ -69,6 +69,9 @@ export const api = {
   openaiKeyStatus: () => request("/auth/openai-key"),
   setOpenaiKey: (payload) =>
     request("/auth/openai-key", { method: "PUT", body: JSON.stringify(payload) }),
+  llmPreferences: () => request("/auth/llm/preferences"),
+  updateLlmPreferences: (payload) =>
+    request("/auth/llm/preferences", { method: "PUT", body: JSON.stringify(payload) }),
   prompts: () => request("/prompts/defaults"),
   leetcodePrompts: () => request("/leetcode/prompts"),
   updateLeetcodePrompts: (payload) =>
@@ -164,6 +167,20 @@ export const api = {
     return request(`/admin/jobs?${search.toString()}`);
   },
   adminMetricsOverview: () => request("/admin/metrics/overview"),
+  adminConsumptionOverview: (range = "7d") => request(`/admin/consumption/overview?range=${encodeURIComponent(range)}`),
+  adminConsumptionUsersTable: (range = "30d", limit = 100) =>
+    request(`/admin/consumption/users-table?range=${encodeURIComponent(range)}&limit=${limit}`),
+  adminConsumptionByUser: ({ range = "30d", granularity = "daily", user_id, top_n = 5 } = {}) => {
+    const search = new URLSearchParams();
+    search.set("range", range);
+    search.set("granularity", granularity);
+    search.set("top_n", String(top_n));
+    if (user_id) search.set("user_id", String(user_id));
+    return request(`/admin/consumption/by-user?${search.toString()}`);
+  },
+  adminLlmSettings: () => request("/admin/llm/settings"),
+  updateAdminLlmSettings: (payload) =>
+    request("/admin/llm/settings", { method: "PUT", body: JSON.stringify(payload) }),
   logout: async () => {
     try {
       await request("/auth/logout", { method: "POST" });

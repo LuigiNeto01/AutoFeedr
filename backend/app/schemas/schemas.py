@@ -41,6 +41,12 @@ class OpenAIKeyUpdate(BaseModel):
     api_key: str = Field(min_length=20, max_length=500)
 
 
+class UserLLMPreferencesOut(BaseModel):
+    selected_model: str | None
+    effective_model: str | None
+    allowed_models: list[str]
+
+
 class AccountCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     token: str = Field(min_length=10)
@@ -480,3 +486,81 @@ class AdminMetricsOverviewOut(BaseModel):
     total_jobs_24h: int
     statuses_24h: list[AdminMetricsStatusItem]
     flows_24h: list[AdminMetricsFlowItem]
+
+
+class AdminLLMModelConfigItem(BaseModel):
+    id: int | None = None
+    model: str = Field(min_length=1, max_length=120)
+    input_price_per_1m: float = Field(ge=0)
+    cached_input_price_per_1m: float = Field(ge=0)
+    output_price_per_1m: float = Field(ge=0)
+    is_enabled: bool = True
+
+
+class AdminLLMSettingsOut(BaseModel):
+    provider: str
+    has_api_key: bool
+    default_model: str | None
+    models: list[AdminLLMModelConfigItem]
+
+
+class AdminLLMSettingsUpdate(BaseModel):
+    provider: str = "openai"
+    api_key: str | None = None
+    default_model: str | None = None
+    models: list[AdminLLMModelConfigItem] = Field(default_factory=list)
+
+    @field_validator("provider")
+    @classmethod
+    def validate_provider(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized != "openai":
+            raise ValueError("provider deve ser 'openai' no momento")
+        return normalized
+
+
+class AdminConsumptionOverviewModelItem(BaseModel):
+    model: str
+    requests: int
+    input_tokens: int
+    cached_input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    estimated_cost_usd: float
+
+
+class AdminConsumptionOverviewOut(BaseModel):
+    range: str
+    requests: int
+    input_tokens: int
+    cached_input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    estimated_cost_usd: float
+    top_models: list[AdminConsumptionOverviewModelItem]
+
+
+class AdminConsumptionSeriesPoint(BaseModel):
+    bucket: str
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    estimated_cost_usd: float
+
+
+class AdminConsumptionUserSeriesOut(BaseModel):
+    user_id: int | None
+    email: str | None
+    points: list[AdminConsumptionSeriesPoint]
+
+
+class AdminConsumptionUserTableRow(BaseModel):
+    user_id: int | None
+    email: str | None
+    requests: int
+    input_tokens: int
+    cached_input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    estimated_cost_usd: float
+    most_used_model: str | None

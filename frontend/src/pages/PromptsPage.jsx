@@ -10,15 +10,20 @@ export default function PromptsPage() {
   const [success, setSuccess] = useState("");
   const [defaults, setDefaults] = useState(null);
   const [solutionPrompt, setSolutionPrompt] = useState("");
+  const [llmPrefs, setLlmPrefs] = useState(null);
+  const [selectedModel, setSelectedModel] = useState("");
 
   async function loadData() {
     setLoading(true);
     try {
-      const [defaultsData, leetcodePromptData] = await Promise.all([
+      const [defaultsData, leetcodePromptData, llmPrefsData] = await Promise.all([
         api.prompts(),
         api.leetcodePrompts(),
+        api.llmPreferences(),
       ]);
       setDefaults(defaultsData ?? null);
+      setLlmPrefs(llmPrefsData ?? null);
+      setSelectedModel(llmPrefsData?.selected_model || llmPrefsData?.effective_model || "");
       setSolutionPrompt(
         leetcodePromptData?.solution_prompt ||
           defaultsData?.leetcode_solution_prompt ||
@@ -47,8 +52,13 @@ export default function PromptsPage() {
     setError("");
     setSuccess("");
     try {
-      await api.updateLeetcodePrompts({ solution_prompt: solutionPrompt.trim() });
-      setSuccess("Prompt de solucao LeetCode atualizado.");
+      await Promise.all([
+        api.updateLeetcodePrompts({ solution_prompt: solutionPrompt.trim() }),
+        api.updateLlmPreferences({ selected_model: selectedModel || null }),
+      ]);
+      setSuccess("Prompt de solucao LeetCode e modelo preferido atualizados.");
+      const refreshedPrefs = await api.llmPreferences();
+      setLlmPrefs(refreshedPrefs ?? null);
     } catch (err) {
       setError(getErrorMessage(err, "Falha ao salvar prompt."));
     } finally {
@@ -87,6 +97,25 @@ export default function PromptsPage() {
         <section className={`rounded-2xl border p-4 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
           <h3 className={`mb-3 text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Prompt de solucao LeetCode</h3>
           <form className="space-y-3" onSubmit={handleSave}>
+            <label className="block">
+              <span className={`mb-1 block text-xs font-medium ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>
+                Modelo de IA (permitido pela plataforma)
+              </span>
+              <select
+                value={selectedModel}
+                onChange={(event) => setSelectedModel(event.target.value)}
+                className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-100 focus:border-sky-500" : "border-slate-300 bg-white text-slate-900 focus:border-slate-900"}`}
+              >
+                {(llmPrefs?.allowed_models || []).map((model) => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))}
+              </select>
+              <p className={`mt-1 text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
+                Modelo efetivo atual: {llmPrefs?.effective_model || "-"}
+              </p>
+            </label>
             <TextAreaField
               label="Template editavel"
               value={solutionPrompt}

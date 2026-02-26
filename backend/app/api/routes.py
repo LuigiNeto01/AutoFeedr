@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from decimal import Decimal, InvalidOperation
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -17,12 +18,15 @@ from app.models.models import (
     GitHubAccount,
     GitHubRepository,
     Job,
+    LLMModelConfig,
+    LLMUsageEvent,
     LeetCodeCompletedProblem,
     LeetCodeJob,
     LeetCodeJobLog,
     LeetCodeSchedule,
     LeetCodeScheduleRun,
     LinkedinAccount,
+    PlatformLLMSettings,
     Schedule,
     ScheduleRun,
     User,
@@ -36,6 +40,13 @@ from app.schemas.schemas import (
     AuthTokenOut,
     AuthUserOut,
     AdminAuditLogOut,
+    AdminConsumptionOverviewModelItem,
+    AdminConsumptionOverviewOut,
+    AdminConsumptionSeriesPoint,
+    AdminConsumptionUserSeriesOut,
+    AdminConsumptionUserTableRow,
+    AdminLLMSettingsOut,
+    AdminLLMSettingsUpdate,
     AdminMetricsFlowItem,
     AdminMetricsOverviewOut,
     AdminMetricsStatusItem,
@@ -65,6 +76,7 @@ from app.schemas.schemas import (
     ScheduleCreate,
     ScheduleOut,
     ScheduleUpdate,
+    UserLLMPreferencesOut,
 )
 from packages.Escritor.src.prompt import PROMPT_GERACAO_POST, PROMPT_TRADUCAO
 from packages.leetcode_automation.prompts import PROMPT_GENERATE_SOLUTION
@@ -188,6 +200,65 @@ def _write_admin_audit_log(
             details=json.dumps(details, ensure_ascii=True, sort_keys=True) if details else None,
         )
     )
+
+
+def _safe_decimal(value: str | None) -> Decimal:
+    try:
+        return Decimal((value or "0").strip() or "0")
+    except (InvalidOperation, AttributeError):
+        return Decimal("0")
+
+
+def _price_to_float(value: str | None) -> float:
+    return float(_safe_decimal(value))
+
+
+def _get_platform_llm_settings(db: Session) -> PlatformLLMSettings:
+    settings_row = db.query(PlatformLLMSettings).filter(PlatformLLMSettings.id == 1).first()
+    if settings_row:
+        return settings_row
+    settings_row = PlatformLLMSettings(id=1, provider="openai", default_model="gpt-5-nano", is_active=True)
+    db.add(settings_row)
+    db.commit()
+    db.refresh(settings_row)
+    return settings_row
+
+
+def _get_enabled_llm_models(db: Session, provider: str = "openai") -> list[LLMModelConfig]:
+    return (
+        db.query(LLMModelConfig)
+        .filter(LLMModelConfig.provider == provider)
+        .order_by(LLMModelConfig.model.asc())
+        .all()
+    )
+
+
+def _resolve_allowed_models(db: Session, provider: str = "openai") -> list[str]:
+    return [row.model for row in _get_enabled_llm_models(db, provider=provider) if row.is_enabled]
+
+
+def _resolve_effective_user_model(db: Session, user: User, provider: str = "openai") -> str | None:
+    platform_settings = _get_platform_llm_settings(db)
+    allowed = _resolve_allowed_models(db, provider=provider)
+    preferred = (user.preferred_llm_model or "").strip() or None
+    default_model = (platform_settings.default_model or "").strip() or None
+    if preferred and preferred in allowed:
+        return preferred
+    if default_model and default_model in allowed:
+        return default_model
+    return allowed[0] if allowed else default_model
+
+
+def _parse_range_to_since(range_value: str) -> tuple[str, datetime]:
+    normalized = (range_value or "7d").strip().lower()
+    now = datetime.now(UTC).replace(tzinfo=None)
+    if normalized == "24h":
+        return normalized, now - timedelta(hours=24)
+    if normalized == "30d":
+        return normalized, now - timedelta(days=30)
+    if normalized == "90d":
+        return normalized, now - timedelta(days=90)
+    return "7d", now - timedelta(days=7)
 
 
 def _build_auth_response(db: Session, user: User) -> AuthTokenOut:
@@ -575,9 +646,286 @@ def admin_metrics_overview(
     )
 
 
+@router.get("/admin/llm/settings", response_model=AdminLLMSettingsOut)
+def admin_get_llm_settings(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    platform = _get_platform_llm_settings(db)
+    models = _get_enabled_llm_models(db, provider=platform.provider)
+    return AdminLLMSettingsOut(
+        provider=platform.provider,
+        has_api_key=platform.has_api_key,
+        default_model=platform.default_model,
+        models=[
+            {
+                "id": row.id,
+                "model": row.model,
+                "input_price_per_1m": _price_to_float(row.input_price_per_1m),
+                "cached_input_price_per_1m": _price_to_float(row.cached_input_price_per_1m),
+                "output_price_per_1m": _price_to_float(row.output_price_per_1m),
+                "is_enabled": row.is_enabled,
+            }
+            for row in models
+        ],
+    )
+
+
+@router.put("/admin/llm/settings", response_model=AdminLLMSettingsOut)
+def admin_update_llm_settings(
+    payload: AdminLLMSettingsUpdate,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+):
+    platform = _get_platform_llm_settings(db)
+    platform.provider = payload.provider
+    if payload.api_key is not None and payload.api_key.strip():
+        fernet = _fernet_or_500()
+        platform.api_key_encrypted = encrypt_text(fernet, payload.api_key.strip())
+    platform.default_model = (payload.default_model or "").strip() or None
+
+    existing = {
+        (row.provider, row.model): row
+        for row in db.query(LLMModelConfig).filter(LLMModelConfig.provider == payload.provider).all()
+    }
+    seen_models: set[str] = set()
+    for item in payload.models:
+        model_name = item.model.strip()
+        if not model_name:
+            continue
+        seen_models.add(model_name)
+        row = existing.get((payload.provider, model_name))
+        if not row:
+            row = LLMModelConfig(provider=payload.provider, model=model_name)
+            db.add(row)
+        row.input_price_per_1m = str(item.input_price_per_1m)
+        row.cached_input_price_per_1m = str(item.cached_input_price_per_1m)
+        row.output_price_per_1m = str(item.output_price_per_1m)
+        row.is_enabled = bool(item.is_enabled)
+
+    for (provider_key, model_key), row in existing.items():
+        if provider_key == payload.provider and model_key not in seen_models:
+            row.is_enabled = False
+
+    if platform.default_model:
+        enabled_names = {m.model.strip() for m in payload.models if m.is_enabled}
+        if platform.default_model not in enabled_names:
+            raise HTTPException(status_code=422, detail="default_model precisa estar habilitado na lista de modelos.")
+
+    _write_admin_audit_log(
+        db,
+        admin_user_id=admin_user.id,
+        action="admin.llm_settings_update",
+        details={
+            "provider": payload.provider,
+            "default_model": platform.default_model,
+            "models_count": len(payload.models),
+            "api_key_updated": bool((payload.api_key or "").strip()),
+        },
+    )
+
+    db.commit()
+    return admin_get_llm_settings(db=db, _=admin_user)
+
+
+@router.get("/admin/consumption/overview", response_model=AdminConsumptionOverviewOut)
+def admin_consumption_overview(
+    db: Session = Depends(get_db),
+    range: str = "7d",
+    _: User = Depends(require_admin),
+):
+    normalized_range, since = _parse_range_to_since(range)
+    rows = db.query(LLMUsageEvent).filter(LLMUsageEvent.created_at >= since).all()
+
+    total = {
+        "requests": len(rows),
+        "input_tokens": sum(item.input_tokens or 0 for item in rows),
+        "cached_input_tokens": sum(item.cached_input_tokens or 0 for item in rows),
+        "output_tokens": sum(item.output_tokens or 0 for item in rows),
+        "total_tokens": sum(item.total_tokens or 0 for item in rows),
+        "estimated_cost_usd": float(sum(_safe_decimal(item.estimated_cost_usd) for item in rows)),
+    }
+
+    by_model: dict[str, dict[str, Decimal | int]] = {}
+    for item in rows:
+        bucket = by_model.setdefault(
+            item.model,
+            {
+                "requests": 0,
+                "input_tokens": 0,
+                "cached_input_tokens": 0,
+                "output_tokens": 0,
+                "total_tokens": 0,
+                "estimated_cost_usd": Decimal("0"),
+            },
+        )
+        bucket["requests"] = int(bucket["requests"]) + 1
+        bucket["input_tokens"] = int(bucket["input_tokens"]) + int(item.input_tokens or 0)
+        bucket["cached_input_tokens"] = int(bucket["cached_input_tokens"]) + int(item.cached_input_tokens or 0)
+        bucket["output_tokens"] = int(bucket["output_tokens"]) + int(item.output_tokens or 0)
+        bucket["total_tokens"] = int(bucket["total_tokens"]) + int(item.total_tokens or 0)
+        bucket["estimated_cost_usd"] = _safe_decimal(item.estimated_cost_usd) + _safe_decimal(str(bucket["estimated_cost_usd"]))
+
+    top_models = sorted(
+        [
+            AdminConsumptionOverviewModelItem(
+                model=model,
+                requests=int(values["requests"]),
+                input_tokens=int(values["input_tokens"]),
+                cached_input_tokens=int(values["cached_input_tokens"]),
+                output_tokens=int(values["output_tokens"]),
+                total_tokens=int(values["total_tokens"]),
+                estimated_cost_usd=float(values["estimated_cost_usd"]),
+            )
+            for model, values in by_model.items()
+        ],
+        key=lambda item: (item.total_tokens, item.requests),
+        reverse=True,
+    )[:10]
+
+    return AdminConsumptionOverviewOut(range=normalized_range, top_models=top_models, **total)
+
+
+@router.get("/admin/consumption/users-table", response_model=list[AdminConsumptionUserTableRow])
+def admin_consumption_users_table(
+    db: Session = Depends(get_db),
+    range: str = "30d",
+    limit: int = 100,
+    _: User = Depends(require_admin),
+):
+    _, since = _parse_range_to_since(range)
+    safe_limit = max(1, min(limit, 500))
+    rows = (
+        db.query(LLMUsageEvent, User)
+        .outerjoin(User, User.id == LLMUsageEvent.owner_user_id)
+        .filter(LLMUsageEvent.created_at >= since)
+        .all()
+    )
+    grouped: dict[int | None, dict] = {}
+    for event, user in rows:
+        key = event.owner_user_id
+        bucket = grouped.setdefault(
+            key,
+            {
+                "user_id": key,
+                "email": user.email if user else None,
+                "requests": 0,
+                "input_tokens": 0,
+                "cached_input_tokens": 0,
+                "output_tokens": 0,
+                "total_tokens": 0,
+                "estimated_cost_usd": Decimal("0"),
+                "models": {},
+            },
+        )
+        bucket["requests"] += 1
+        bucket["input_tokens"] += int(event.input_tokens or 0)
+        bucket["cached_input_tokens"] += int(event.cached_input_tokens or 0)
+        bucket["output_tokens"] += int(event.output_tokens or 0)
+        bucket["total_tokens"] += int(event.total_tokens or 0)
+        bucket["estimated_cost_usd"] += _safe_decimal(event.estimated_cost_usd)
+        bucket["models"][event.model] = bucket["models"].get(event.model, 0) + 1
+
+    items = []
+    for _, bucket in grouped.items():
+        most_used_model = None
+        if bucket["models"]:
+            most_used_model = sorted(bucket["models"].items(), key=lambda x: x[1], reverse=True)[0][0]
+        items.append(
+            AdminConsumptionUserTableRow(
+                user_id=bucket["user_id"],
+                email=bucket["email"],
+                requests=bucket["requests"],
+                input_tokens=bucket["input_tokens"],
+                cached_input_tokens=bucket["cached_input_tokens"],
+                output_tokens=bucket["output_tokens"],
+                total_tokens=bucket["total_tokens"],
+                estimated_cost_usd=float(bucket["estimated_cost_usd"]),
+                most_used_model=most_used_model,
+            )
+        )
+    items.sort(key=lambda item: (item.total_tokens, item.requests), reverse=True)
+    return items[:safe_limit]
+
+
+@router.get("/admin/consumption/by-user", response_model=list[AdminConsumptionUserSeriesOut])
+def admin_consumption_by_user(
+    db: Session = Depends(get_db),
+    range: str = "30d",
+    granularity: str = "daily",
+    user_id: int | None = None,
+    top_n: int = 5,
+    _: User = Depends(require_admin),
+):
+    normalized_range, since = _parse_range_to_since(range)
+    gran = (granularity or "daily").strip().lower()
+    if gran not in {"daily", "weekly", "monthly"}:
+        gran = "daily"
+
+    rows = (
+        db.query(LLMUsageEvent, User)
+        .outerjoin(User, User.id == LLMUsageEvent.owner_user_id)
+        .filter(LLMUsageEvent.created_at >= since)
+        .all()
+    )
+    if user_id is not None:
+        rows = [row for row in rows if row[0].owner_user_id == user_id]
+
+    user_totals: dict[int | None, int] = {}
+    for event, _user in rows:
+        key = event.owner_user_id
+        user_totals[key] = user_totals.get(key, 0) + int(event.total_tokens or 0)
+    selected_users = {key for key, _ in sorted(user_totals.items(), key=lambda kv: kv[1], reverse=True)[: max(1, top_n)]}
+    if user_id is not None:
+        selected_users = {user_id}
+
+    series_map: dict[tuple[int | None, str | None], dict[str, dict]] = {}
+    for event, user in rows:
+        if event.owner_user_id not in selected_users:
+            continue
+        dt = event.created_at
+        if gran == "weekly":
+            year, week, _ = dt.isocalendar()
+            bucket_key = f"{year}-W{week:02d}"
+        elif gran == "monthly":
+            bucket_key = f"{dt.year:04d}-{dt.month:02d}"
+        else:
+            bucket_key = f"{dt.year:04d}-{dt.month:02d}-{dt.day:02d}"
+        user_key = (event.owner_user_id, user.email if user else None)
+        buckets = series_map.setdefault(user_key, {})
+        bucket = buckets.setdefault(
+            bucket_key,
+            {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "estimated_cost_usd": Decimal('0')},
+        )
+        bucket["input_tokens"] += int(event.input_tokens or 0)
+        bucket["output_tokens"] += int(event.output_tokens or 0)
+        bucket["total_tokens"] += int(event.total_tokens or 0)
+        bucket["estimated_cost_usd"] += _safe_decimal(event.estimated_cost_usd)
+
+    output: list[AdminConsumptionUserSeriesOut] = []
+    for (uid, email), buckets in series_map.items():
+        points = [
+            AdminConsumptionSeriesPoint(
+                bucket=bucket_name,
+                input_tokens=values["input_tokens"],
+                output_tokens=values["output_tokens"],
+                total_tokens=values["total_tokens"],
+                estimated_cost_usd=float(values["estimated_cost_usd"]),
+            )
+            for bucket_name, values in sorted(buckets.items(), key=lambda kv: kv[0])
+        ]
+        output.append(AdminConsumptionUserSeriesOut(user_id=uid, email=email, points=points))
+    output.sort(key=lambda item: sum(point.total_tokens for point in item.points), reverse=True)
+    return output
+
+
 @router.get("/auth/openai-key")
-def auth_openai_key_status(current_user: User = Depends(get_current_user)):
-    return {"has_openai_api_key": current_user.has_openai_api_key}
+def auth_openai_key_status(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    platform = _get_platform_llm_settings(db)
+    return {"has_openai_api_key": platform.has_api_key}
 
 
 @router.put("/auth/openai-key")
@@ -586,11 +934,50 @@ def auth_set_openai_key(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if (current_user.role or "user") != "admin":
+        raise HTTPException(status_code=403, detail="Somente admin pode configurar a chave central da plataforma.")
     fernet = _fernet_or_500()
-    current_user.openai_api_key_encrypted = encrypt_text(fernet, payload.api_key.strip())
+    platform = _get_platform_llm_settings(db)
+    platform.api_key_encrypted = encrypt_text(fernet, payload.api_key.strip())
+    db.commit()
+    db.refresh(platform)
+    return {"ok": True, "has_openai_api_key": platform.has_api_key}
+
+
+@router.get("/auth/llm/preferences", response_model=UserLLMPreferencesOut)
+def auth_llm_preferences(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    platform = _get_platform_llm_settings(db)
+    allowed_models = _resolve_allowed_models(db, provider=platform.provider)
+    effective = _resolve_effective_user_model(db, current_user, provider=platform.provider)
+    return UserLLMPreferencesOut(
+        selected_model=current_user.preferred_llm_model,
+        effective_model=effective,
+        allowed_models=allowed_models,
+    )
+
+
+@router.put("/auth/llm/preferences", response_model=UserLLMPreferencesOut)
+def auth_update_llm_preferences(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    requested_model = (str(payload.get("selected_model") or "").strip() or None)
+    platform = _get_platform_llm_settings(db)
+    allowed_models = _resolve_allowed_models(db, provider=platform.provider)
+    if requested_model and requested_model not in allowed_models:
+        raise HTTPException(status_code=422, detail="Modelo nao permitido para o usuario.")
+    current_user.preferred_llm_model = requested_model
     db.commit()
     db.refresh(current_user)
-    return {"ok": True, "has_openai_api_key": current_user.has_openai_api_key}
+    return UserLLMPreferencesOut(
+        selected_model=current_user.preferred_llm_model,
+        effective_model=_resolve_effective_user_model(db, current_user, provider=platform.provider),
+        allowed_models=allowed_models,
+    )
 
 
 @router.get("/prompts/defaults")

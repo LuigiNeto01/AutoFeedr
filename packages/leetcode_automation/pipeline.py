@@ -36,6 +36,9 @@ class LeetCodePipelineInput:
     tmp_root: str
     solution_prompt_template: str | None = None
     openai_api_key: str | None = None
+    model_override: str | None = None
+    usage_callback: object | None = None
+    usage_context_base: dict | None = None
 
 
 @dataclass
@@ -65,7 +68,12 @@ def execute_leetcode_pipeline(payload: LeetCodePipelineInput) -> LeetCodePipelin
         forced_problem_slug=payload.forced_problem_slug,
     )
 
-    session = get_llm_session(openai_api_key=payload.openai_api_key)
+    session = get_llm_session(
+        openai_api_key=payload.openai_api_key,
+        model_override=payload.model_override,
+        usage_callback=payload.usage_callback,
+        usage_context=payload.usage_context_base or {},
+    )
     solution_code = generate_solution_code(
         session,
         problem,

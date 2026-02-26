@@ -33,6 +33,7 @@ export const PANEL_NAV_ITEMS = [
       { key: "admin-dashboard", label: "Dashboard", href: "/admin/dashboard" },
       { key: "admin-usuarios", label: "Usuarios", href: "/admin/usuarios" },
       { key: "admin-execucoes", label: "Execucoes", href: "/admin/execucoes" },
+      { key: "admin-consumos", label: "Consumos", href: "/admin/consumos" },
     ],
   },
 ];

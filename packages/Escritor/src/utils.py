@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, List
+from dataclasses import dataclass, field
+from typing import Any, Callable, List
 
 import dotenv
 import requests
@@ -19,9 +19,16 @@ class AISession:
     gemini_client: genai.Client | None = None
     openai_api_key: str | None = None
     openai_base_url: str | None = None
+    usage_callback: Callable[[dict[str, Any]], None] | None = None
+    usage_context: dict[str, Any] = field(default_factory=dict)
 
 
-def conectar_ia(openai_api_key: str | None = None) -> AISession:
+def conectar_ia(
+    openai_api_key: str | None = None,
+    model_override: str | None = None,
+    usage_callback: Callable[[dict[str, Any]], None] | None = None,
+    usage_context: dict[str, Any] | None = None,
+) -> AISession:
     config = load_ai_config()
 
     if config.provider == "gemini":
@@ -30,7 +37,13 @@ def conectar_ia(openai_api_key: str | None = None) -> AISession:
         print("Configurando cliente IA (Gemini)...")
         client = genai.Client(api_key=config.gemini_api_key)
         print(f"Modelo selecionado: {config.model}")
-        return AISession(provider="gemini", model=config.model, gemini_client=client)
+        return AISession(
+            provider="gemini",
+            model=(model_override or config.model).strip(),
+            gemini_client=client,
+            usage_callback=usage_callback,
+            usage_context=usage_context or {},
+        )
 
     api_key = (openai_api_key or "").strip()
     if not api_key:
@@ -39,9 +52,11 @@ def conectar_ia(openai_api_key: str | None = None) -> AISession:
     print(f"Modelo selecionado: {config.model}")
     return AISession(
         provider="openai",
-        model=config.model,
+        model=(model_override or config.model).strip(),
         openai_api_key=api_key,
         openai_base_url=config.openai_base_url,
+        usage_callback=usage_callback,
+        usage_context=usage_context or {},
     )
 
 
@@ -50,7 +65,7 @@ def conectar_gemini() -> AISession:
     return conectar_ia()
 
 
-def gerar_resposta(modelo: AISession, prompt: str) -> str:
+def gerar_resposta(modelo: AISession, prompt: str, usage_context: dict[str, Any] | None = None) -> str:
     try:
         print(f"Enviando prompt para IA ({modelo.provider})...")
         if modelo.provider == "gemini":
@@ -62,7 +77,7 @@ def gerar_resposta(modelo: AISession, prompt: str) -> str:
             )
             texto = (resposta.text or "").strip()
         else:
-            texto = _gerar_resposta_openai(modelo, prompt)
+            texto = _gerar_resposta_openai(modelo, prompt, usage_context=usage_context)
 
         if not texto:
             raise RuntimeError(f"Resposta vazia da IA ({modelo.provider}).")
@@ -87,7 +102,7 @@ def listar_modelos() -> List[str]:
     return [config.model]
 
 
-def _gerar_resposta_openai(modelo: AISession, prompt: str) -> str:
+def _gerar_resposta_openai(modelo: AISession, prompt: str, usage_context: dict[str, Any] | None = None) -> str:
     if not modelo.openai_api_key or not modelo.openai_base_url:
         raise RuntimeError("Sessao OpenAI invalida.")
 
@@ -107,6 +122,31 @@ def _gerar_resposta_openai(modelo: AISession, prompt: str) -> str:
     if response.status_code >= 400:
         raise RuntimeError(f"OpenAI HTTP {response.status_code}: {response.text}")
     payload: dict[str, Any] = response.json()
+    usage_payload = payload.get("usage") or {}
+    input_tokens = int(usage_payload.get("input_tokens") or 0)
+    output_tokens = int(usage_payload.get("output_tokens") or 0)
+    total_tokens = int(usage_payload.get("total_tokens") or (input_tokens + output_tokens))
+    input_details = usage_payload.get("input_tokens_details") or {}
+    cached_input_tokens = int(
+        input_details.get("cached_tokens")
+        or input_details.get("cached_input_tokens")
+        or 0
+    )
+    if modelo.usage_callback:
+        callback_payload: dict[str, Any] = {
+            "provider": "openai",
+            "model": modelo.model,
+            "input_tokens": input_tokens,
+            "cached_input_tokens": cached_input_tokens,
+            "output_tokens": output_tokens,
+            "total_tokens": total_tokens,
+        }
+        callback_payload.update(modelo.usage_context or {})
+        callback_payload.update(usage_context or {})
+        try:
+            modelo.usage_callback(callback_payload)
+        except Exception:
+            pass
 
     direct_output = (payload.get("output_text") or "").strip()
     if direct_output:

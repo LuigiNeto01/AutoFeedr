@@ -11,6 +11,7 @@ import PromptsPage from "./pages/PromptsPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import AdminExecutionsPage from "./pages/AdminExecutionsPage";
+import AdminConsumptionPage from "./pages/AdminConsumptionPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PanelLayout from "./layout/PanelLayout";
 
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
           { path: "/admin/dashboard", element: <AdminDashboardPage /> },
           { path: "/admin/usuarios", element: <AdminUsersPage /> },
           { path: "/admin/execucoes", element: <AdminExecutionsPage /> },
+          { path: "/admin/consumos", element: <AdminConsumptionPage /> },
         ],
       },
     ],

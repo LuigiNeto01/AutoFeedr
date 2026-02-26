@@ -43,6 +43,7 @@ def ensure_schema() -> None:
     _add_column_if_missing("users", "leetcode_solution_prompt TEXT", "leetcode_solution_prompt")
     _add_column_if_missing("users", "openai_api_key_encrypted TEXT", "openai_api_key_encrypted")
     _add_column_if_missing("users", "role VARCHAR(32) DEFAULT 'user'", "role")
+    _add_column_if_missing("users", "preferred_llm_model VARCHAR(120)", "preferred_llm_model")
 
     _execute("UPDATE users SET role = 'user' WHERE role IS NULL OR TRIM(role) = ''")
     _execute(
@@ -58,6 +59,23 @@ def ensure_schema() -> None:
         )
         AND NOT EXISTS (
             SELECT 1 FROM users WHERE role = 'admin'
+        )
+        """
+    )
+    _execute(
+        """
+        INSERT INTO platform_llm_settings (id, provider, default_model, is_active, created_at, updated_at)
+        SELECT 1, 'openai', 'gpt-5-nano', TRUE, NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'
+        WHERE NOT EXISTS (SELECT 1 FROM platform_llm_settings WHERE id = 1)
+        """
+    )
+    _execute(
+        """
+        INSERT INTO llm_model_configs
+            (provider, model, input_price_per_1m, cached_input_price_per_1m, output_price_per_1m, is_enabled, created_at, updated_at)
+        SELECT 'openai', 'gpt-5-nano', '0.05', '0.005', '0.40', TRUE, NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'
+        WHERE NOT EXISTS (
+            SELECT 1 FROM llm_model_configs WHERE provider = 'openai' AND model = 'gpt-5-nano'
         )
         """
     )
