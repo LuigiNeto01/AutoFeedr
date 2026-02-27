@@ -79,7 +79,7 @@ export default function PanelLayout() {
   };
 
   return (
-    <div className={`flex h-screen overflow-hidden ${isDarkMode ? "bg-slate-900" : "bg-slate-100"}`}>
+    <div className={`flex h-dvh overflow-hidden ${isDarkMode ? "bg-slate-900" : "bg-slate-100"}`}>
       <div className="hidden h-full md:block">
         <Sidebar
           open={isSidebarExpanded}
@@ -112,7 +112,7 @@ export default function PanelLayout() {
           >
             <HiOutlineMenuAlt2 className="h-6 w-6" />
           </button>
-          <div>
+          <div className="min-w-0">
             <p
               className={`text-xs uppercase tracking-[0.2em] ${
                 isDarkMode ? "text-slate-400" : "text-slate-500"
@@ -120,7 +120,7 @@ export default function PanelLayout() {
             >
               AutoFeedr
             </p>
-            <h1 className={`text-base font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
+            <h1 className={`truncate text-base font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
               {pageTitle}
             </h1>
           </div>

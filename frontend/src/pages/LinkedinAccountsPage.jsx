@@ -229,7 +229,7 @@ export default function LinkedinAccountsPage() {
             placeholder="Buscar por nome ou URN..."
             className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:border-sky-500" : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 focus:border-slate-900"}`}
           />
-          <div className={`inline-flex rounded-xl border p-1 ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-300 bg-slate-50"}`}>
+          <div className={`inline-flex w-full rounded-xl border p-1 md:w-auto ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-300 bg-slate-50"}`}>
             <FilterButton label="Todas" active={filter === "all"} onClick={() => setFilter("all")} isDarkMode={isDarkMode} />
             <FilterButton label="Ativas" active={filter === "active"} onClick={() => setFilter("active")} isDarkMode={isDarkMode} />
             <FilterButton label="Inativas" active={filter === "inactive"} onClick={() => setFilter("inactive")} isDarkMode={isDarkMode} />
@@ -346,14 +346,14 @@ function AccountModal({
   showName = false,
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-2 sm:items-center sm:p-4">
       <button
         type="button"
         onClick={onClose}
         className="absolute inset-0 bg-black/55"
         aria-label="Fechar modal"
       />
-      <div className={`relative z-10 w-full max-w-xl rounded-2xl border p-4 shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
+      <div className={`relative z-10 max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl border p-4 shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
         <h3 className={`mb-4 text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{title}</h3>
         <form className="space-y-3" onSubmit={onSubmit}>
           {showName ? (
@@ -399,7 +399,7 @@ function AccountModal({
             />
             Conta ativa
           </label>
-          <div className="grid grid-cols-2 gap-2 pt-2">
+          <div className="grid grid-cols-1 gap-2 pt-2 sm:grid-cols-2">
             <button
               type="submit"
               disabled={saving}
@@ -435,7 +435,7 @@ function FilterButton({ label, active, onClick, isDarkMode }) {
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+      className={`flex-1 rounded-lg px-3 py-1.5 text-center text-xs font-medium transition md:flex-none ${
         active
           ? isDarkMode
             ? "bg-slate-600 text-slate-100"

@@ -84,6 +84,13 @@ export const api = {
       return request(`/jobs?limit=${limit}`);
     }
   },
+  linkedinJob: async (id) => {
+    try {
+      return await request(`/linkedin/jobs/${id}`);
+    } catch {
+      return request(`/jobs/${id}`);
+    }
+  },
   linkedinSchedules: async () => {
     try {
       return await request("/linkedin/schedules");
@@ -98,6 +105,8 @@ export const api = {
     const suffix = search.toString() ? `?${search.toString()}` : "";
     return request(`/leetcode/jobs${suffix}`);
   },
+  leetcodeJob: (id) => request(`/leetcode/jobs/${id}`),
+  leetcodeJobLogs: (id) => request(`/leetcode/jobs/${id}/logs`),
   leetcodeSchedules: () => request("/leetcode/schedules"),
   createLinkedinSchedule: async (payload) => {
     try {

@@ -227,7 +227,7 @@ const Sidebar = forwardRef(function Sidebar(
     <aside
       ref={ref}
       className={[
-        "z-50 flex h-screen shrink-0 flex-col border-r shadow-sm transition-all duration-200",
+        "z-50 flex h-dvh shrink-0 flex-col border-r shadow-sm transition-all duration-200",
         "pointer-events-auto",
         isDarkMode ? "border-slate-700 bg-slate-950" : "border-slate-200 bg-white",
         isMobile ? "w-full" : open ? "w-72" : "w-16",

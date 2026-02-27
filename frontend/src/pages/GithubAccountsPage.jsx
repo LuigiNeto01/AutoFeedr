@@ -57,6 +57,7 @@ export default function GithubAccountsPage() {
   const [accountEditForm, setAccountEditForm] = useState(ACCOUNT_EDIT);
   const [repoCreateForm, setRepoCreateForm] = useState(REPO_CREATE);
   const [repoEditForm, setRepoEditForm] = useState(REPO_EDIT);
+  const [mobileTab, setMobileTab] = useState("repositories");
 
   async function loadData({ silent = false } = {}) {
     if (silent) setRefreshing(true);
@@ -304,8 +305,13 @@ export default function GithubAccountsPage() {
         <Stat label="Repos ativos" value={stats.rActive} isDarkMode={isDarkMode} />
       </section>
 
+      <section className={`mb-1 inline-flex w-full rounded-xl border p-1 md:hidden ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-300 bg-slate-50"}`}>
+        <Chip active={mobileTab === "accounts"} onClick={() => setMobileTab("accounts")} isDarkMode={isDarkMode}>Contas</Chip>
+        <Chip active={mobileTab === "repositories"} onClick={() => setMobileTab("repositories")} isDarkMode={isDarkMode}>Repos</Chip>
+      </section>
+
       <section className="grid gap-4 lg:grid-cols-12">
-        <div className={`rounded-2xl border p-4 shadow-sm lg:col-span-4 ${panel}`}>
+        <div className={`rounded-2xl border p-4 shadow-sm lg:col-span-4 ${panel} ${mobileTab === "accounts" ? "block" : "hidden md:block"}`}>
           <div className="mb-3 flex items-center justify-between gap-2">
             <h3 className={`text-lg font-semibold ${txt}`}>Contas SSH</h3>
             <button type="button" onClick={() => setCreateAccountOpen(true)} className={`rounded-lg px-3 py-2 text-sm font-semibold text-white transition ${isDarkMode ? "bg-sky-600 hover:bg-sky-500" : "bg-slate-900 hover:bg-slate-700"}`}>Nova conta</button>
@@ -332,14 +338,14 @@ export default function GithubAccountsPage() {
           )}
         </div>
 
-        <div className={`rounded-2xl border p-4 shadow-sm lg:col-span-8 ${panel}`}>
+        <div className={`rounded-2xl border p-4 shadow-sm lg:col-span-8 ${mobileTab === "repositories" ? "block" : "hidden md:block"} ${panel}`}>
           <div className="mb-3 flex items-center justify-between gap-2">
             <h3 className={`text-lg font-semibold ${txt}`}>Repositorios</h3>
             <button type="button" onClick={() => setCreateRepoOpen(true)} disabled={!accounts.length} className={`rounded-lg px-3 py-2 text-sm font-semibold text-white transition disabled:opacity-60 ${isDarkMode ? "bg-emerald-600 hover:bg-emerald-500" : "bg-emerald-700 hover:bg-emerald-600"}`}>Novo repositorio</button>
           </div>
           <div className="mb-4 flex flex-col gap-3 md:flex-row">
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar repositorio, autor ou conta..." className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:border-sky-500" : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 focus:border-slate-900"}`} />
-            <div className={`inline-flex rounded-xl border p-1 ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-300 bg-slate-50"}`}>
+            <div className={`inline-flex w-full rounded-xl border p-1 md:w-auto ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-300 bg-slate-50"}`}>
               <Chip active={filter === "all"} onClick={() => setFilter("all")} isDarkMode={isDarkMode}>Todos</Chip>
               <Chip active={filter === "active"} onClick={() => setFilter("active")} isDarkMode={isDarkMode}>Ativos</Chip>
               <Chip active={filter === "inactive"} onClick={() => setFilter("inactive")} isDarkMode={isDarkMode}>Inativos</Chip>
@@ -352,7 +358,8 @@ export default function GithubAccountsPage() {
                 <article key={r.id} className={`rounded-2xl border p-4 transition ${card}`}>
                   <div className="mb-2 flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <h3 className={`truncate text-sm font-semibold ${txt}`}>{r.repo_ssh_url}</h3>
+                      <h3 className={`truncate text-sm font-semibold ${txt}`}>{extractRepoName(r.repo_ssh_url)}</h3>
+                      <p className={`mt-0.5 break-all text-[11px] ${sub}`}>{r.repo_ssh_url}</p>
                       <p className={`mt-0.5 truncate text-xs ${sub}`}>Conta: {accountMap.get(r.account_id) ?? `#${r.account_id}`}</p>
                     </div>
                     <StatusBadge active={r.is_active} isDarkMode={isDarkMode} />
@@ -366,7 +373,7 @@ export default function GithubAccountsPage() {
                   <p className={`mb-3 text-xs ${sub}`}>Autor: {r.commit_author_name} ({r.commit_author_email})</p>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className={`text-xs ${sub}`}>Atualizado em {formatDate(r.updated_at)}</p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
                       <label className={`inline-flex items-center gap-1 text-xs ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}><input type="checkbox" checked={r.is_active} disabled={busyRepoId === r.id} onChange={(e) => toggleRepo(r, e.target.checked)} />Ativo</label>
                       <button type="button" onClick={() => openRepoEdit(r)} className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${isDarkMode ? "bg-slate-700 text-slate-100 hover:bg-slate-600" : "bg-slate-900 text-white hover:bg-slate-700"}`}>Editar</button>
                       <button type="button" disabled={busyRepoId === r.id} onClick={() => removeRepo(r)} className={`rounded-lg px-2.5 py-1.5 text-xs font-medium text-white transition ${isDarkMode ? "bg-red-700/80 hover:bg-red-700" : "bg-red-600 hover:bg-red-500"}`}>Excluir</button>
@@ -389,16 +396,16 @@ export default function GithubAccountsPage() {
 
 function AccountModal({ title, submit, form, setForm, onSubmit, onClose, isDarkMode, saving, showName = false, requireKey = false }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-2 sm:items-center sm:p-4">
       <button type="button" onClick={onClose} className="absolute inset-0 bg-black/55" aria-label="Fechar modal" />
-      <div className={`relative z-10 w-full max-w-xl rounded-2xl border p-4 shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
+      <div className={`relative z-10 max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl border p-4 shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
         <h3 className={`mb-4 text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{title}</h3>
         <form className="space-y-3" onSubmit={onSubmit}>
           {showName ? <Field label="Nome" value={form.name} onChange={(v) => setForm((p) => ({ ...p, name: v }))} isDarkMode={isDarkMode} /> : null}
           <Area label={requireKey ? "SSH private key" : "Nova SSH private key (opcional)"} value={form.ssh_private_key} rows={6} onChange={(v) => setForm((p) => ({ ...p, ssh_private_key: v }))} isDarkMode={isDarkMode} />
           <Field label="Passphrase (opcional)" type="password" value={form.ssh_passphrase} onChange={(v) => setForm((p) => ({ ...p, ssh_passphrase: v }))} isDarkMode={isDarkMode} />
           <label className={`inline-flex items-center gap-2 text-sm ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}><input type="checkbox" checked={form.is_active} onChange={(e) => setForm((p) => ({ ...p, is_active: e.target.checked }))} />Conta ativa</label>
-          <div className="grid grid-cols-2 gap-2 pt-2">
+          <div className="grid grid-cols-1 gap-2 pt-2 sm:grid-cols-2">
             <button type="submit" disabled={saving} className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${isDarkMode ? "bg-sky-600 hover:bg-sky-500" : "bg-slate-900 hover:bg-slate-700"}`}>{submit}</button>
             <button type="button" onClick={onClose} className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${isDarkMode ? "bg-slate-700 text-slate-100 hover:bg-slate-600" : "bg-slate-200 text-slate-800 hover:bg-slate-300"}`}>Cancelar</button>
           </div>
@@ -410,9 +417,9 @@ function AccountModal({ title, submit, form, setForm, onSubmit, onClose, isDarkM
 
 function RepoModal({ title, submit, form, setForm, onSubmit, onClose, isDarkMode, saving, accounts, showRepoUrl = false }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-2 sm:items-center sm:p-4">
       <button type="button" onClick={onClose} className="absolute inset-0 bg-black/55" aria-label="Fechar modal" />
-      <div className={`relative z-10 w-full max-w-2xl rounded-2xl border p-4 shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
+      <div className={`relative z-10 max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border p-4 shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
         <h3 className={`mb-4 text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{title}</h3>
         <form className="space-y-3" onSubmit={onSubmit}>
           <Select label="Conta" value={form.account_id} onChange={(v) => setForm((p) => ({ ...p, account_id: v }))} options={accounts.map((a) => ({ value: String(a.id), label: a.name }))} isDarkMode={isDarkMode} />
@@ -430,7 +437,7 @@ function RepoModal({ title, submit, form, setForm, onSubmit, onClose, isDarkMode
             <Select label="Politica dificuldade" value={form.difficulty_policy} onChange={(v) => setForm((p) => ({ ...p, difficulty_policy: v }))} options={DIFFICULTIES.map((d) => ({ value: d, label: d }))} isDarkMode={isDarkMode} />
           </div>
           <label className={`inline-flex items-center gap-2 text-sm ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}><input type="checkbox" checked={form.is_active} onChange={(e) => setForm((p) => ({ ...p, is_active: e.target.checked }))} />Repositorio ativo</label>
-          <div className="grid grid-cols-2 gap-2 pt-2">
+          <div className="grid grid-cols-1 gap-2 pt-2 sm:grid-cols-2">
             <button type="submit" disabled={saving} className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${isDarkMode ? "bg-emerald-600 hover:bg-emerald-500" : "bg-emerald-700 hover:bg-emerald-600"}`}>{submit}</button>
             <button type="button" onClick={onClose} className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${isDarkMode ? "bg-slate-700 text-slate-100 hover:bg-slate-600" : "bg-slate-200 text-slate-800 hover:bg-slate-300"}`}>Cancelar</button>
           </div>
@@ -445,7 +452,7 @@ function Stat({ label, value, isDarkMode }) {
 }
 
 function Chip({ active, onClick, isDarkMode, children }) {
-  return <button type="button" onClick={onClick} className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${active ? (isDarkMode ? "bg-slate-600 text-slate-100" : "bg-white text-slate-900 shadow-sm") : (isDarkMode ? "text-slate-300 hover:bg-slate-700" : "text-slate-600 hover:bg-slate-100")}`}>{children}</button>;
+  return <button type="button" onClick={onClick} className={`flex-1 rounded-lg px-3 py-1.5 text-center text-xs font-medium transition md:flex-none ${active ? (isDarkMode ? "bg-slate-600 text-slate-100" : "bg-white text-slate-900 shadow-sm") : (isDarkMode ? "text-slate-300 hover:bg-slate-700" : "text-slate-600 hover:bg-slate-100")}`}>{children}</button>;
 }
 
 function Field({ label, value, onChange, isDarkMode, type = "text" }) {
@@ -466,6 +473,15 @@ function Empty({ text, isDarkMode }) {
 
 function StatusBadge({ active, isDarkMode }) {
   return <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase ${active ? (isDarkMode ? "bg-emerald-500/20 text-emerald-300" : "bg-emerald-100 text-emerald-700") : (isDarkMode ? "bg-slate-700 text-slate-300" : "bg-slate-200 text-slate-600")}`}>{active ? "Ativo" : "Inativo"}</span>;
+}
+
+function extractRepoName(repoSshUrl) {
+  const raw = String(repoSshUrl || "").trim();
+  const match = raw.match(/^[^:]+:([^/]+)\/(.+?)(?:\.git)?$/);
+  if (match) return match[2];
+  const slash = raw.lastIndexOf("/");
+  const name = slash >= 0 ? raw.slice(slash + 1) : raw;
+  return name.replace(/\.git$/, "") || raw;
 }
 
 function formatDate(value) {

@@ -5,6 +5,7 @@ import LinkedinAccountsPage from "./pages/LinkedinAccountsPage";
 import GithubAccountsPage from "./pages/GithubAccountsPage";
 import AutomationsPage from "./pages/AutomationsPage";
 import ResultsPage from "./pages/ResultsPage";
+import ResultDetailPage from "./pages/ResultDetailPage";
 import RunNowPage from "./pages/RunNowPage";
 import SchedulesPage from "./pages/SchedulesPage";
 import PromptsPage from "./pages/PromptsPage";
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
           { path: "/executar-agora", element: <RunNowPage /> },
           { path: "/agendamentos", element: <SchedulesPage /> },
           { path: "/resultados", element: <ResultsPage /> },
+          { path: "/resultados/:kind/:id", element: <ResultDetailPage /> },
           { path: "/configuracoes", element: <Navigate to="/configuracoes/prompts" replace /> },
           { path: "/configuracoes/prompts", element: <PromptsPage /> },
           { path: "/admin", element: <Navigate to="/admin/dashboard" replace /> },

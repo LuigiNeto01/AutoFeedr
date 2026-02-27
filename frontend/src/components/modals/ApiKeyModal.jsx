@@ -60,7 +60,7 @@ export default function ApiKeyModal({ open, onClose, isDarkMode = false }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center p-2 sm:items-center sm:p-4">
       <button
         type="button"
         onClick={onClose}
@@ -68,7 +68,7 @@ export default function ApiKeyModal({ open, onClose, isDarkMode = false }) {
         aria-label="Fechar modal"
       />
 
-      <div className={`relative z-10 w-full max-w-xl rounded-2xl border p-4 shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
+      <div className={`relative z-10 max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl border p-4 shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h3 className={`text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
@@ -123,7 +123,7 @@ export default function ApiKeyModal({ open, onClose, isDarkMode = false }) {
             Mostrar chave
           </label>
 
-          <div className="grid grid-cols-2 gap-2 pt-1">
+          <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-2">
             <button
               type="submit"
               disabled={saving}

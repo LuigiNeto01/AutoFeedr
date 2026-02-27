@@ -67,6 +67,7 @@ export default function SchedulesPage() {
   const [modalMode, setModalMode] = useState("create");
   const [editingRow, setEditingRow] = useState(null);
   const [dragState, setDragState] = useState(null);
+  const [mobileDay, setMobileDay] = useState(String(new Date().getDay()));
 
   async function loadData({ silent = false } = {}) {
     if (!silent) setLoading(true);
@@ -362,15 +363,83 @@ export default function SchedulesPage() {
       {success ? <Message tone="success" text={success} isDarkMode={isDarkMode} /> : null}
 
       <section className={`rounded-2xl border p-4 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3 className={`text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Calendario de automacoes</h3>
-          <div className={`inline-flex rounded-xl border p-1 text-xs ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-300 bg-slate-50"}`}>
+          <div className={`inline-flex w-full rounded-xl border p-1 text-xs sm:w-auto ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-300 bg-slate-50"}`}>
             <Chip active={tab === "linkedin"} onClick={() => setTab("linkedin")} isDarkMode={isDarkMode}>Selecionar: LinkedIn</Chip>
             <Chip active={tab === "leetcode"} onClick={() => setTab("leetcode")} isDarkMode={isDarkMode}>Selecionar: LeetCode</Chip>
           </div>
         </div>
 
-        <div className={`overflow-x-auto rounded-xl border ${isDarkMode ? "border-slate-700" : "border-slate-200"}`}>
+        <div className="mb-4 space-y-3 md:hidden">
+          <div className="overflow-x-auto pb-1">
+            <div className="inline-flex min-w-full gap-1">
+              {WEEK_DAYS.map((day) => (
+                <button
+                  key={`mobile-day-${day.value}`}
+                  type="button"
+                  onClick={() => setMobileDay(day.value)}
+                  className={`flex-1 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+                    mobileDay === day.value
+                      ? isDarkMode
+                        ? "bg-slate-600 text-slate-100"
+                        : "bg-white text-slate-900 shadow-sm"
+                      : isDarkMode
+                        ? "bg-slate-800 text-slate-300"
+                        : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {day.short}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => openCreateModal({ flow: tab })}
+            className={`w-full rounded-xl px-3 py-2 text-sm font-semibold text-white transition ${isDarkMode ? "bg-sky-600 hover:bg-sky-500" : "bg-slate-900 hover:bg-slate-700"}`}
+          >
+            Novo agendamento
+          </button>
+          {(() => {
+            const selectedDay = WEEK_DAYS.find((day) => day.value === mobileDay) || WEEK_DAYS[0];
+            const selectedDayNum = Number(selectedDay.value);
+            const events = rowsByDay.get(selectedDayNum) || [];
+            return (
+              <article className={`rounded-xl border p-3 ${isDarkMode ? "border-slate-700 bg-slate-800/60" : "border-slate-200 bg-slate-50"}`}>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <h4 className={`text-sm font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{selectedDay.label}</h4>
+                  <button
+                    type="button"
+                    onClick={() => openCreateModal({ dayOfWeek: selectedDayNum, flow: tab })}
+                    className={`rounded-lg px-2.5 py-1 text-xs font-medium ${isDarkMode ? "bg-slate-700 text-slate-200 hover:bg-slate-600" : "bg-slate-200 text-slate-700 hover:bg-slate-300"}`}
+                  >
+                    Adicionar
+                  </button>
+                </div>
+                {events.length === 0 ? (
+                  <p className={`text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Sem agendamentos</p>
+                ) : (
+                  <div className="space-y-2">
+                    {events.map((event) => (
+                      <div key={event.uid} className={`rounded-lg border p-2 ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
+                        <p className={`text-xs font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{event.timeLocal} - {event.destination}</p>
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          <button type="button" onClick={() => openEditModal(event)} className={`rounded px-2 py-0.5 text-[10px] font-medium ${isDarkMode ? "bg-slate-700 text-slate-200 hover:bg-slate-600" : "bg-slate-200 text-slate-800 hover:bg-slate-300"}`}>Editar</button>
+                          <button type="button" disabled={busyId === event.uid} onClick={() => toggleActive(event, !event.isActive)} className={`rounded px-2 py-0.5 text-[10px] font-medium ${event.isActive ? (isDarkMode ? "bg-emerald-700/70 text-emerald-100" : "bg-emerald-200 text-emerald-800") : (isDarkMode ? "bg-slate-700 text-slate-300" : "bg-slate-200 text-slate-700")}`}>{event.isActive ? "Ativo" : "Inativo"}</button>
+                          <button type="button" disabled={busyId === event.uid} onClick={() => deleteSchedule(event)} className={`rounded px-2 py-0.5 text-[10px] font-medium ${isDarkMode ? "bg-red-900/50 text-red-200 hover:bg-red-900/70" : "bg-red-100 text-red-700 hover:bg-red-200"}`}>Excluir</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </article>
+            );
+          })()}
+        </div>
+
+        <div className={`hidden overflow-x-auto rounded-xl border md:block ${isDarkMode ? "border-slate-700" : "border-slate-200"}`}>
           <div className="min-w-[980px]">
             <div className={`grid grid-cols-[80px_repeat(7,minmax(120px,1fr))] border-b ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-slate-50"}`}>
               <div className="px-3 py-2" />
@@ -514,14 +583,14 @@ function CreateScheduleModal({
     : `${WEEK_DAYS[Number(lcForm.day_of_week)]?.label || "-"}, ${lcForm.time_local || "-"}`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-2 sm:items-center sm:p-4">
       <button type="button" onClick={onClose} className="absolute inset-0 bg-black/55" aria-label="Fechar modal" />
-      <div className={`relative z-10 w-full max-w-2xl rounded-2xl border p-4 shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
+      <div className={`relative z-10 max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border p-4 shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
         <h3 className={`mb-1 text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{mode === "edit" ? "Editar agendamento" : "Novo agendamento"}</h3>
         <p className={`mb-3 text-xs ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Horario selecionado: {slotLabel} • Timezone fixa: {DEFAULT_TIMEZONE}</p>
 
         {mode !== "edit" ? (
-          <div className={`mb-3 inline-flex rounded-xl border p-1 ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-300 bg-slate-50"}`}>
+          <div className={`mb-3 inline-flex w-full rounded-xl border p-1 sm:w-auto ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-300 bg-slate-50"}`}>
             <Chip active={tab === "linkedin"} onClick={() => setTab("linkedin")} isDarkMode={isDarkMode}>LinkedIn</Chip>
             <Chip active={tab === "leetcode"} onClick={() => setTab("leetcode")} isDarkMode={isDarkMode}>LeetCode</Chip>
           </div>
@@ -531,12 +600,12 @@ function CreateScheduleModal({
           <form className="space-y-3" onSubmit={createLinkedin}>
             <SelectField label="Conta" value={liForm.account_id} onChange={(value) => setLiForm((prev) => ({ ...prev, account_id: value }))} isDarkMode={isDarkMode} options={accounts.map((item) => ({ value: String(item.id), label: item.name }))} />
             <InputField label="Topico" value={liForm.topic} onChange={(value) => setLiForm((prev) => ({ ...prev, topic: value }))} isDarkMode={isDarkMode} />
-            <div className="grid gap-3 grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <SelectField label="Dia" value={liForm.day_of_week} onChange={(value) => setLiForm((prev) => ({ ...prev, day_of_week: value }))} isDarkMode={isDarkMode} options={WEEK_DAYS} />
               <InputField type="time" step={60} label="Hora" value={liForm.time_local} onChange={(value) => setLiForm((prev) => ({ ...prev, time_local: value }))} isDarkMode={isDarkMode} />
             </div>
             <CheckField label="Ativo" checked={liForm.is_active} onChange={(checked) => setLiForm((prev) => ({ ...prev, is_active: checked }))} isDarkMode={isDarkMode} />
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <button type="submit" disabled={savingLi} className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${isDarkMode ? "bg-sky-600 hover:bg-sky-500" : "bg-slate-900 hover:bg-slate-700"}`}>{savingLi ? "Salvando..." : mode === "edit" ? "Salvar LinkedIn" : "Criar LinkedIn"}</button>
               <button type="button" onClick={onClose} className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${isDarkMode ? "bg-slate-700 text-slate-100 hover:bg-slate-600" : "bg-slate-200 text-slate-800 hover:bg-slate-300"}`}>Cancelar</button>
             </div>
@@ -550,11 +619,11 @@ function CreateScheduleModal({
               isDarkMode={isDarkMode}
               options={repositories.map((item) => ({ value: String(item.id), label: extractRepoName(item.repo_ssh_url) }))}
             />
-            <div className="grid gap-3 grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <SelectField label="Dia" value={lcForm.day_of_week} onChange={(value) => setLcForm((prev) => ({ ...prev, day_of_week: value }))} isDarkMode={isDarkMode} options={WEEK_DAYS} />
               <InputField type="time" step={60} label="Hora" value={lcForm.time_local} onChange={(value) => setLcForm((prev) => ({ ...prev, time_local: value }))} isDarkMode={isDarkMode} />
             </div>
-            <div className="grid gap-3 grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <SelectField
                 label="Selection strategy"
                 value={lcForm.selection_strategy}
@@ -581,7 +650,7 @@ function CreateScheduleModal({
             </div>
             <InputField type="number" label="Max attempts" value={String(lcForm.max_attempts)} onChange={(value) => setLcForm((prev) => ({ ...prev, max_attempts: Number(value) || 1 }))} isDarkMode={isDarkMode} />
             <CheckField label="Ativo" checked={lcForm.is_active} onChange={(checked) => setLcForm((prev) => ({ ...prev, is_active: checked }))} isDarkMode={isDarkMode} />
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <button type="submit" disabled={savingLc} className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${isDarkMode ? "bg-sky-600 hover:bg-sky-500" : "bg-slate-900 hover:bg-slate-700"}`}>{savingLc ? "Salvando..." : mode === "edit" ? "Salvar LeetCode" : "Criar LeetCode"}</button>
               <button type="button" onClick={onClose} className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${isDarkMode ? "bg-slate-700 text-slate-100 hover:bg-slate-600" : "bg-slate-200 text-slate-800 hover:bg-slate-300"}`}>Cancelar</button>
             </div>
@@ -608,7 +677,7 @@ function Empty({ text, isDarkMode }) {
 }
 
 function Chip({ active, onClick, isDarkMode, children }) {
-  return <button type="button" onClick={onClick} className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${active ? (isDarkMode ? "bg-slate-600 text-slate-100" : "bg-white text-slate-900 shadow-sm") : (isDarkMode ? "text-slate-300 hover:bg-slate-700" : "text-slate-600 hover:bg-slate-100")}`}>{children}</button>;
+  return <button type="button" onClick={onClick} className={`flex-1 rounded-lg px-3 py-1.5 text-center text-xs font-medium transition sm:flex-none ${active ? (isDarkMode ? "bg-slate-600 text-slate-100" : "bg-white text-slate-900 shadow-sm") : (isDarkMode ? "text-slate-300 hover:bg-slate-700" : "text-slate-600 hover:bg-slate-100")}`}>{children}</button>;
 }
 
 function InputField({ label, value, onChange, isDarkMode, type = "text", step }) {

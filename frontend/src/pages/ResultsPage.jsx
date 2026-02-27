@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { Link, useOutletContext } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 
 export default function ResultsPage() {
@@ -53,26 +53,42 @@ export default function ResultsPage() {
     [leetcodeJobs],
   );
 
-  const searchLower = search.trim().toLowerCase();
-  const filteredPosts = useMemo(
-    () =>
-      publishedPosts.filter((item) => {
-        if (kind !== "all" && kind !== "linkedin") return false;
-        const text = `${item.topic || ""} ${item.generated_post || ""}`.toLowerCase();
-        return !searchLower || text.includes(searchLower);
-      }),
-    [publishedPosts, kind, searchLower],
-  );
+  const allResults = useMemo(() => {
+    const posts = publishedPosts.map((item) => ({
+      uid: `linkedin-${item.id}`,
+      kind: "linkedin",
+      id: item.id,
+      title: item.topic || "Sem topico",
+      subtitle: accountById.get(item.account_id) ?? `Conta #${item.account_id}`,
+      body: item.generated_post || "-",
+      updatedAt: item.updated_at,
+      raw: item,
+    }));
 
-  const filteredProblems = useMemo(
-    () =>
-      completedProblems.filter((item) => {
-        if (kind !== "all" && kind !== "leetcode") return false;
-        const text = `${item.problem_slug || ""} ${item.problem_title || ""} ${item.commit_sha || ""}`.toLowerCase();
-        return !searchLower || text.includes(searchLower);
-      }),
-    [completedProblems, kind, searchLower],
-  );
+    const problems = completedProblems.map((item) => ({
+      uid: `leetcode-${item.id}`,
+      kind: "leetcode",
+      id: item.id,
+      title: item.problem_title || item.problem_slug || "LeetCode job",
+      subtitle: repoById.get(item.repository_id) ?? `Repositorio #${item.repository_id}`,
+      body: `Commit: ${shortSha(item.commit_sha)}`,
+      updatedAt: item.updated_at,
+      raw: item,
+    }));
+
+    return [...posts, ...problems].sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
+  }, [publishedPosts, completedProblems, accountById, repoById]);
+
+  const filteredResults = useMemo(() => {
+    const searchLower = search.trim().toLowerCase();
+    return allResults.filter((item) => {
+      if (kind !== "all" && item.kind !== kind) return false;
+      const text = `${item.title} ${item.subtitle} ${item.body}`.toLowerCase();
+      return !searchLower || text.includes(searchLower);
+    });
+  }, [allResults, kind, search]);
 
   if (loading) return <div className={`h-64 animate-pulse rounded-2xl ${isDarkMode ? "bg-slate-800/70" : "bg-slate-200/70"}`} />;
 
@@ -108,22 +124,19 @@ export default function ResultsPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-2">
-        <ResultList title="Posts publicados" empty="Nenhum post encontrado." items={filteredPosts} isDarkMode={isDarkMode} renderItem={(item) => (
+      <section>
+        <ResultList title="Execucoes" empty="Nenhuma execucao encontrada." items={filteredResults} isDarkMode={isDarkMode} renderItem={(item) => (
           <>
-            <p className={`text-sm font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>#{item.id} - {item.topic || "Sem topico"}</p>
-            <p className={`text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{accountById.get(item.account_id) ?? `Conta #${item.account_id}`}</p>
-            <p className={`mt-1 line-clamp-3 text-xs ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>{item.generated_post}</p>
-            <p className={`mt-2 text-xs ${isDarkMode ? "text-slate-500" : "text-slate-500"}`}>{formatDate(item.updated_at)}</p>
-          </>
-        )} />
-
-        <ResultList title="Problemas concluidos" empty="Nenhum problema encontrado." items={filteredProblems} isDarkMode={isDarkMode} renderItem={(item) => (
-          <>
-            <p className={`text-sm font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>#{item.id} - {item.problem_title || item.problem_slug || "LeetCode job"}</p>
-            <p className={`text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{repoById.get(item.repository_id) ?? `Repositorio #${item.repository_id}`}</p>
-            <p className={`mt-1 text-xs ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>Commit: <span className="font-mono">{shortSha(item.commit_sha)}</span></p>
-            <p className={`mt-2 text-xs ${isDarkMode ? "text-slate-500" : "text-slate-500"}`}>{formatDate(item.updated_at)}</p>
+            <div className="flex items-start justify-between gap-2">
+              <p className={`text-sm font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>#{item.id} - {item.title}</p>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${item.kind === "linkedin" ? (isDarkMode ? "bg-sky-700/40 text-sky-200" : "bg-sky-100 text-sky-700") : (isDarkMode ? "bg-emerald-700/40 text-emerald-200" : "bg-emerald-100 text-emerald-700")}`}>
+                {item.kind}
+              </span>
+            </div>
+            <p className={`text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{item.subtitle}</p>
+            <p className={`mt-1 text-xs ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>{item.body}</p>
+            <p className={`mt-2 text-xs ${isDarkMode ? "text-slate-500" : "text-slate-500"}`}>{formatDate(item.updatedAt)}</p>
+            <Link to={`/resultados/${item.kind}/${item.id}`} state={{ prefetchedJob: item.raw }} className={`mt-2 inline-flex rounded-lg px-2.5 py-1 text-xs font-medium ${isDarkMode ? "bg-slate-700 text-slate-100 hover:bg-slate-600" : "bg-slate-900 text-white hover:bg-slate-700"}`}>Detalhar</Link>
           </>
         )} />
       </section>

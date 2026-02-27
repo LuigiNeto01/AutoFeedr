@@ -1284,6 +1284,23 @@ def list_jobs(
     )
 
 
+@router.get("/linkedin/jobs/{job_id}", response_model=JobOut)
+def get_linkedin_job(
+    job_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    job = (
+        db.query(Job)
+        .join(LinkedinAccount, LinkedinAccount.id == Job.account_id)
+        .filter(Job.id == job_id, LinkedinAccount.owner_user_id == current_user.id)
+        .first()
+    )
+    if not job:
+        raise HTTPException(status_code=404, detail="Job LinkedIn nao encontrado.")
+    return job
+
+
 @router.get("/github/accounts", response_model=list[GitHubAccountOut])
 def list_github_accounts(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return (

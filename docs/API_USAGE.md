@@ -372,6 +372,16 @@ Exemplo:
 curl -s "http://localhost:8000/linkedin/jobs?limit=20"
 ```
 
+### 4.11 Detalhar job
+
+`GET /linkedin/jobs/{job_id}`
+
+Exemplo:
+
+```bash
+curl -s "http://localhost:8000/linkedin/jobs/123"
+```
+
 ## 5) Erros comuns e diagnostico
 
 1. `404 Conta nao encontrada`
