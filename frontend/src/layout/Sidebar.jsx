@@ -269,22 +269,42 @@ const Sidebar = forwardRef(function Sidebar(
                   title={!open ? item.label : undefined}
                   aria-current={active ? "page" : undefined}
                   className={[
-                    "group my-1.5 flex w-full items-center rounded-lg text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+                    "group relative isolate my-2 flex w-full items-center rounded-xl border text-sm font-medium backdrop-blur-sm transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
                     open ? "justify-start gap-4 px-4 py-3" : "justify-center py-3",
                     active
-                      ? "bg-slate-900 text-white"
+                      ? isDarkMode
+                        ? "-translate-y-0.5 border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 text-white shadow-[0_18px_28px_-18px_rgba(15,23,42,0.95)]"
+                        : "-translate-y-0.5 border-slate-300 bg-gradient-to-br from-slate-900 to-slate-700 text-white shadow-[0_18px_28px_-18px_rgba(15,23,42,0.45)]"
                       : isDarkMode
-                        ? "text-slate-300 hover:bg-slate-800 hover:text-slate-100"
-                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                        ? "border-slate-700/80 bg-slate-900/70 text-slate-300 shadow-[0_10px_20px_-20px_rgba(148,163,184,0.9)] hover:-translate-y-0.5 hover:border-slate-600 hover:bg-slate-800 hover:text-slate-100 hover:shadow-[0_20px_28px_-18px_rgba(15,23,42,0.95)]"
+                        : "border-slate-200 bg-white/95 text-slate-600 shadow-[0_10px_20px_-20px_rgba(15,23,42,0.45)] hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:shadow-[0_20px_28px_-18px_rgba(15,23,42,0.35)]",
                   ].join(" ")}
                 >
-                  <Icon className="h-6 w-6 shrink-0" aria-hidden="true" />
-                  <span className={open ? "truncate" : "sr-only"}>{item.label}</span>
+                  <span
+                    aria-hidden="true"
+                    className={[
+                      "pointer-events-none absolute inset-0 rounded-[inherit] transition-opacity duration-300",
+                      active ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+                      isDarkMode
+                        ? "bg-gradient-to-r from-sky-400/15 via-transparent to-indigo-400/10"
+                        : "bg-gradient-to-r from-sky-500/10 via-transparent to-indigo-500/10",
+                    ].join(" ")}
+                  />
+                  <span
+                    aria-hidden="true"
+                    className={[
+                      "pointer-events-none absolute inset-x-4 -bottom-1 h-4 rounded-full blur-lg transition-opacity duration-300",
+                      active ? "opacity-70" : "opacity-0 group-hover:opacity-60",
+                      isDarkMode ? "bg-sky-300/20" : "bg-sky-500/20",
+                    ].join(" ")}
+                  />
+                  <Icon className="relative z-10 h-6 w-6 shrink-0" aria-hidden="true" />
+                  <span className={`relative z-10 ${open ? "truncate" : "sr-only"}`}>{item.label}</span>
                   {open && hasChildren ? (
                     isExpanded ? (
-                      <HiOutlineChevronDown className="ml-auto h-4 w-4" />
+                      <HiOutlineChevronDown className="relative z-10 ml-auto h-4 w-4" />
                     ) : (
-                      <HiOutlineChevronRight className="ml-auto h-4 w-4" />
+                      <HiOutlineChevronRight className="relative z-10 ml-auto h-4 w-4" />
                     )
                   ) : null}
                 </button>
@@ -308,18 +328,28 @@ const Sidebar = forwardRef(function Sidebar(
                           type="button"
                           onClick={() => onSelect?.(child)}
                           className={[
-                            "my-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition",
+                            "group relative isolate my-1.5 flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left text-sm backdrop-blur-sm transition-all duration-300 ease-out",
                             childActive
                               ? isDarkMode
-                                ? "bg-slate-800 font-semibold text-slate-100"
-                                : "bg-slate-100 font-semibold text-slate-900"
+                                ? "-translate-y-0.5 border-slate-600 bg-slate-800 font-semibold text-slate-100 shadow-[0_14px_24px_-20px_rgba(15,23,42,0.95)]"
+                                : "-translate-y-0.5 border-slate-300 bg-slate-100 font-semibold text-slate-900 shadow-[0_14px_24px_-20px_rgba(15,23,42,0.35)]"
                               : isDarkMode
-                                ? "text-slate-300 hover:bg-slate-800 hover:text-slate-100"
-                                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                                ? "border-slate-700 bg-slate-900/70 text-slate-300 hover:-translate-y-0.5 hover:border-slate-600 hover:bg-slate-800 hover:text-slate-100"
+                                : "border-slate-200 bg-white/95 text-slate-600 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:text-slate-900",
                           ].join(" ")}
                         >
-                          <ChildIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                          <span>{child.label}</span>
+                          <span
+                            aria-hidden="true"
+                            className={[
+                              "pointer-events-none absolute inset-0 rounded-[inherit] transition-opacity duration-300",
+                              childActive ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+                              isDarkMode
+                                ? "bg-gradient-to-r from-sky-400/10 via-transparent to-indigo-400/10"
+                                : "bg-gradient-to-r from-sky-500/10 via-transparent to-indigo-500/10",
+                            ].join(" ")}
+                          />
+                          <ChildIcon className="relative z-10 h-4 w-4 shrink-0" aria-hidden="true" />
+                          <span className="relative z-10">{child.label}</span>
                         </button>
                       );
                     })}
