@@ -235,11 +235,6 @@ export default function AdminExecutionsPage() {
                   <p className={`truncate text-xs ${sub}`}>Origem: {job.source}</p>
                   <p className={`text-xs ${sub}`}>Agendado: {formatDate(job.scheduled_for)}</p>
                 </div>
-                {job.error_message ? (
-                  <p className={`mt-2 rounded-lg border px-2 py-1 text-xs ${isDarkMode ? "border-red-900/50 bg-red-950/30 text-red-200" : "border-red-200 bg-red-50 text-red-700"}`}>
-                    {job.error_message}
-                  </p>
-                ) : null}
                 <div className="mt-3 flex justify-end">
                   <button
                     type="button"

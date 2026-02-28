@@ -21,6 +21,7 @@ export default function AdminDashboardPage() {
   async function loadData({ silent = false } = {}) {
     if (silent) setRefreshing(true);
     else setLoading(true);
+
     try {
       const [metricsData, logsData] = await Promise.all([
         api.adminMetricsOverview(),
@@ -47,18 +48,12 @@ export default function AdminDashboardPage() {
     [metrics],
   );
 
-  const mainStats = useMemo(
+  const summaryStats = useMemo(
     () => [
       { key: "users", label: "Usuários", value: metrics?.users_total ?? 0 },
       { key: "users-active", label: "Usuários ativos", value: metrics?.users_active ?? 0 },
       { key: "success", label: "Success 24h", value: statusMap.get("success") ?? 0 },
       { key: "failed", label: "Failed 24h", value: statusMap.get("failed") ?? 0 },
-    ],
-    [metrics, statusMap],
-  );
-
-  const desktopStats = useMemo(
-    () => [
       { key: "jobs", label: "Jobs 24h", value: metrics?.total_jobs_24h ?? 0 },
       {
         key: "schedules",
@@ -66,7 +61,7 @@ export default function AdminDashboardPage() {
         value: (metrics?.linkedin_schedules_active ?? 0) + (metrics?.leetcode_schedules_active ?? 0),
       },
     ],
-    [metrics],
+    [metrics, statusMap],
   );
 
   const auditTotalPages = Math.max(1, Math.ceil(auditLogs.length / AUDIT_PAGE_SIZE));
@@ -111,14 +106,9 @@ export default function AdminDashboardPage() {
 
       {metrics ? (
         <>
-          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {mainStats.map((item) => (
+          <section className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            {summaryStats.map((item) => (
               <Stat key={item.key} label={item.label} value={item.value} isDarkMode={isDarkMode} />
-            ))}
-            {desktopStats.map((item) => (
-              <div key={item.key} className="hidden sm:block">
-                <Stat label={item.label} value={item.value} isDarkMode={isDarkMode} />
-              </div>
             ))}
           </section>
 
@@ -160,6 +150,7 @@ export default function AdminDashboardPage() {
           <h3 className={`text-lg font-semibold ${txt}`}>Auditoria admin</h3>
           <span className={`text-xs ${sub}`}>{auditLogs.length} registros</span>
         </div>
+
         {auditLogs.length === 0 ? (
           <p className={`rounded-xl border p-4 text-sm ${card} ${sub}`}>Nenhuma ação administrativa registrada ainda.</p>
         ) : (
