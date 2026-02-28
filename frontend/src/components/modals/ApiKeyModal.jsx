@@ -68,7 +68,7 @@ export default function ApiKeyModal({ open, onClose, isDarkMode = false }) {
         aria-label="Fechar modal"
       />
 
-      <div className={`relative z-10 max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl border p-4 shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
+      <div className={`popup-surface ${isDarkMode ? "popup-surface-dark" : "popup-surface-light"} relative z-10 max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl border p-4 shadow-xl`}>
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h3 className={`text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>

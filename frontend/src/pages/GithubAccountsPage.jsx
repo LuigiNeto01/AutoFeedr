@@ -398,7 +398,7 @@ function AccountModal({ title, submit, form, setForm, onSubmit, onClose, isDarkM
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center p-2 sm:items-center sm:p-4">
       <button type="button" onClick={onClose} className="absolute inset-0 bg-black/55" aria-label="Fechar modal" />
-      <div className={`relative z-10 max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl border p-4 shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
+      <div className={`popup-surface ${isDarkMode ? "popup-surface-dark" : "popup-surface-light"} relative z-10 max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl border p-4 shadow-xl`}>
         <h3 className={`mb-4 text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{title}</h3>
         <form className="space-y-3" onSubmit={onSubmit}>
           {showName ? <Field label="Nome" value={form.name} onChange={(v) => setForm((p) => ({ ...p, name: v }))} isDarkMode={isDarkMode} /> : null}
@@ -419,7 +419,7 @@ function RepoModal({ title, submit, form, setForm, onSubmit, onClose, isDarkMode
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center p-2 sm:items-center sm:p-4">
       <button type="button" onClick={onClose} className="absolute inset-0 bg-black/55" aria-label="Fechar modal" />
-      <div className={`relative z-10 max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border p-4 shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
+      <div className={`popup-surface ${isDarkMode ? "popup-surface-dark" : "popup-surface-light"} relative z-10 max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border p-4 shadow-xl`}>
         <h3 className={`mb-4 text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{title}</h3>
         <form className="space-y-3" onSubmit={onSubmit}>
           <Select label="Conta" value={form.account_id} onChange={(v) => setForm((p) => ({ ...p, account_id: v }))} options={accounts.map((a) => ({ value: String(a.id), label: a.name }))} isDarkMode={isDarkMode} />

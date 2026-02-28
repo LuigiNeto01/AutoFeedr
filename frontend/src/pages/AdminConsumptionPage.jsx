@@ -316,7 +316,7 @@ function AdminLlmSettingsModal({ open, onClose, isDarkMode, settings, onSaved })
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <button type="button" onClick={onClose} className="absolute inset-0 bg-black/60" aria-label="Fechar" />
-      <div className={`relative z-10 max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl border p-4 shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
+      <div className={`popup-surface ${isDarkMode ? "popup-surface-dark" : "popup-surface-light"} relative z-10 max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl border p-4 shadow-xl`}>
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h3 className={`text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Configurar LLM central</h3>
@@ -329,7 +329,7 @@ function AdminLlmSettingsModal({ open, onClose, isDarkMode, settings, onSaved })
         {success ? <Message tone="success" text={success} isDarkMode={isDarkMode} /> : null}
 
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <section className={`rounded-xl border p-3 ${isDarkMode ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-slate-50"}`}>
+          <section className={`popup-card ${isDarkMode ? "popup-card-dark" : "popup-card-light"} rounded-xl border p-3 ${isDarkMode ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-slate-50"}`}>
             <div className="grid gap-3 md:grid-cols-3">
               <label className="block">
                 <span className={`mb-1 block text-xs ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>Provider</span>
@@ -354,7 +354,7 @@ function AdminLlmSettingsModal({ open, onClose, isDarkMode, settings, onSaved })
             </div>
           </section>
 
-          <section className={`rounded-xl border p-3 ${isDarkMode ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-slate-50"}`}>
+          <section className={`popup-card ${isDarkMode ? "popup-card-dark" : "popup-card-light"} rounded-xl border p-3 ${isDarkMode ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-slate-50"}`}>
             <div className="mb-2 flex items-center justify-between">
               <h4 className={`text-sm font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Modelos disponíveis</h4>
               <button type="button" onClick={addModel} className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold ${isDarkMode ? "bg-sky-600 text-white" : "bg-slate-900 text-white"}`}>Adicionar modelo</button>

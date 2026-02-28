@@ -1,1 +1,120 @@
 @import "tailwindcss";
+
+@keyframes popupLevitate {
+  0%,
+  100% {
+    transform: translateY(-2px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes popupGlowPulse {
+  0%,
+  100% {
+    opacity: 0.28;
+  }
+  50% {
+    opacity: 0.56;
+  }
+}
+
+.popup-surface {
+  position: relative;
+  isolation: isolate;
+  transform: translateY(-2px);
+  animation: popupLevitate 5.6s ease-in-out infinite;
+}
+
+.popup-surface::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: -18px;
+  height: 24px;
+  border-radius: 999px;
+  filter: blur(12px);
+  z-index: -1;
+  animation: popupGlowPulse 5.6s ease-in-out infinite;
+}
+
+.popup-surface-dark {
+  border-color: rgb(71 85 105 / 0.78);
+  background: linear-gradient(160deg, rgb(2 6 23 / 0.96), rgb(15 23 42 / 0.93));
+  box-shadow:
+    0 28px 48px -30px rgb(2 6 23 / 0.95),
+    0 10px 30px -24px rgb(56 189 248 / 0.55);
+}
+
+.popup-surface-dark::after {
+  background: radial-gradient(circle, rgb(56 189 248 / 0.34), transparent 72%);
+}
+
+.popup-surface-light {
+  border-color: rgb(203 213 225 / 0.95);
+  background: linear-gradient(160deg, rgb(255 255 255), rgb(248 250 252));
+  box-shadow:
+    0 22px 40px -32px rgb(15 23 42 / 0.35),
+    0 6px 22px -20px rgb(14 165 233 / 0.26);
+}
+
+.popup-surface-light::after {
+  background: radial-gradient(circle, rgb(14 165 233 / 0.3), transparent 72%);
+}
+
+.popup-card {
+  position: relative;
+  isolation: isolate;
+  animation: popupLevitate 6.8s ease-in-out infinite;
+}
+
+.popup-card::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: -12px;
+  height: 16px;
+  border-radius: 999px;
+  filter: blur(9px);
+  z-index: -1;
+  animation: popupGlowPulse 6.8s ease-in-out infinite;
+}
+
+.popup-card-dark {
+  border-color: rgb(71 85 105 / 0.72);
+  background: linear-gradient(170deg, rgb(15 23 42 / 0.82), rgb(2 6 23 / 0.84));
+  box-shadow: 0 18px 30px -26px rgb(2 6 23 / 0.86);
+}
+
+.popup-card-dark::after {
+  background: radial-gradient(circle, rgb(14 165 233 / 0.24), transparent 72%);
+}
+
+.popup-card-light {
+  border-color: rgb(226 232 240 / 0.96);
+  background: linear-gradient(170deg, rgb(255 255 255), rgb(248 250 252 / 0.95));
+  box-shadow: 0 14px 24px -24px rgb(15 23 42 / 0.26);
+}
+
+.popup-card-light::after {
+  background: radial-gradient(circle, rgb(56 189 248 / 0.2), transparent 72%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popup-surface,
+  .popup-card {
+    animation: none;
+    transform: translateY(-2px);
+  }
+
+  .popup-surface::after,
+  .popup-card::after {
+    animation: none;
+    opacity: 0.36;
+  }
+}

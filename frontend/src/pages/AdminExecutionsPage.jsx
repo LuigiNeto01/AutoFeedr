@@ -297,7 +297,7 @@ function ExecutionDetailModal({ isDarkMode, job, detail, logs, loading, error, o
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center p-2 sm:items-center sm:p-4">
       <button type="button" onClick={onClose} className="absolute inset-0 bg-black/60" aria-label="Fechar" />
-      <div className={`relative z-10 max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border p-4 shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
+      <div className={`popup-surface ${isDarkMode ? "popup-surface-dark" : "popup-surface-light"} relative z-10 max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border p-4 shadow-xl`}>
         <div className="mb-3 flex items-center justify-between gap-2">
           <h3 className={`text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
             Execução {String(job.job_type || "").toUpperCase()} #{job.job_id}
@@ -324,7 +324,7 @@ function ExecutionDetailModal({ isDarkMode, job, detail, logs, loading, error, o
         </div>
 
         {job.error_message ? (
-          <section className={`mt-3 rounded-xl border p-3 ${isDarkMode ? "border-red-900/50 bg-red-950/30 text-red-200" : "border-red-200 bg-red-50 text-red-700"}`}>
+          <section className={`popup-card ${isDarkMode ? "popup-card-dark" : "popup-card-light"} mt-3 rounded-xl border p-3 ${isDarkMode ? "border-red-900/50 bg-red-950/30 text-red-200" : "border-red-200 bg-red-50 text-red-700"}`}>
             <p className="text-xs font-semibold uppercase tracking-wide">Erro</p>
             <p className="mt-1 text-sm">{job.error_message}</p>
           </section>
@@ -349,7 +349,7 @@ function ExecutionDetailModal({ isDarkMode, job, detail, logs, loading, error, o
         ) : null}
 
         {!loading && kind === "leetcode" && logs ? (
-          <section className={`mt-3 rounded-xl border p-3 ${isDarkMode ? "border-slate-700 bg-slate-800/60" : "border-slate-200 bg-slate-50"}`}>
+          <section className={`popup-card ${isDarkMode ? "popup-card-dark" : "popup-card-light"} mt-3 rounded-xl border p-3 ${isDarkMode ? "border-slate-700 bg-slate-800/60" : "border-slate-200 bg-slate-50"}`}>
             <h4 className={`mb-2 text-sm font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Logs</h4>
             <pre className={`max-h-[320px] overflow-auto rounded-lg border p-2 text-xs ${isDarkMode ? "border-slate-700 bg-slate-950 text-slate-300" : "border-slate-200 bg-white text-slate-700"}`}>
               {formatLogs(logs)}
@@ -383,7 +383,7 @@ function Badge({ status, isDarkMode }) {
 
 function Info({ label, value, isDarkMode }) {
   return (
-    <div className={`rounded-xl border px-3 py-2 ${isDarkMode ? "border-slate-700 bg-slate-800/60" : "border-slate-200 bg-slate-50"}`}>
+    <div className={`popup-card ${isDarkMode ? "popup-card-dark" : "popup-card-light"} rounded-xl border px-3 py-2 ${isDarkMode ? "border-slate-700 bg-slate-800/60" : "border-slate-200 bg-slate-50"}`}>
       <p className={`text-[11px] uppercase tracking-[0.16em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{label}</p>
       <p className={`mt-1 text-sm font-medium ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{value}</p>
     </div>
@@ -392,7 +392,7 @@ function Info({ label, value, isDarkMode }) {
 
 function Block({ title, value, isDarkMode, mono = false }) {
   return (
-    <div className={`rounded-xl border p-3 ${isDarkMode ? "border-slate-700 bg-slate-800/60" : "border-slate-200 bg-slate-50"}`}>
+    <div className={`popup-card ${isDarkMode ? "popup-card-dark" : "popup-card-light"} rounded-xl border p-3 ${isDarkMode ? "border-slate-700 bg-slate-800/60" : "border-slate-200 bg-slate-50"}`}>
       <p className={`mb-1 text-[11px] uppercase tracking-[0.16em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{title}</p>
       <p className={`${mono ? "font-mono" : ""} whitespace-pre-wrap break-words text-sm ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{value}</p>
     </div>

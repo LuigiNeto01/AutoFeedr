@@ -258,7 +258,7 @@ function UserOverviewModal({
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4">
       <button type="button" onClick={onClose} className="absolute inset-0 bg-black/60" aria-label="Fechar" />
-      <div className={`relative z-10 flex h-[96dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-2xl border shadow-xl sm:h-auto sm:max-h-[92vh] sm:rounded-2xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
+      <div className={`popup-surface ${isDarkMode ? "popup-surface-dark" : "popup-surface-light"} relative z-10 flex h-[96dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-2xl border shadow-xl sm:h-auto sm:max-h-[92vh] sm:rounded-2xl`}>
         <div className={`shrink-0 border-b px-3 py-3 sm:px-4 ${isDarkMode ? "border-slate-700" : "border-slate-200"}`}>
           <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -282,7 +282,7 @@ function UserOverviewModal({
 
         {!loading && overview ? (
           <div className="space-y-4">
-            <section className={`rounded-xl border p-3 ${card}`}>
+            <section className={`popup-card ${isDarkMode ? "popup-card-dark" : "popup-card-light"} rounded-xl border p-3 ${card}`}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone={overview.user.is_active ? "green" : "red"} text={overview.user.is_active ? "Ativo" : "Bloqueado"} isDarkMode={isDarkMode} />
@@ -377,7 +377,7 @@ function UserOverviewModal({
         ) : null}
 
         {!loading && !overview ? (
-          <p className={`rounded-xl border p-4 text-sm ${card} ${sub}`}>Não foi possível carregar os detalhes deste usuário.</p>
+          <p className={`popup-card ${isDarkMode ? "popup-card-dark" : "popup-card-light"} rounded-xl border p-4 text-sm ${card} ${sub}`}>Não foi possível carregar os detalhes deste usuário.</p>
         ) : null}
         </div>
       </div>
@@ -387,7 +387,7 @@ function UserOverviewModal({
 
 function Stat({ label, value, isDarkMode }) {
   return (
-    <div className={`rounded-xl border p-3 ${isDarkMode ? "border-slate-700 bg-slate-800/60" : "border-slate-200 bg-slate-50"}`}>
+    <div className={`popup-card ${isDarkMode ? "popup-card-dark" : "popup-card-light"} rounded-xl border p-3 ${isDarkMode ? "border-slate-700 bg-slate-800/60" : "border-slate-200 bg-slate-50"}`}>
       <p className={`text-xs uppercase tracking-wide ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{label}</p>
       <p className={`mt-1 text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{String(value)}</p>
     </div>
@@ -406,14 +406,14 @@ function Badge({ tone = "gray", text, isDarkMode }) {
 
 function ListCard({ title, items, emptyText, isDarkMode }) {
   return (
-    <section className={`rounded-xl border p-3 ${isDarkMode ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-slate-50/80"}`}>
+    <section className={`popup-card ${isDarkMode ? "popup-card-dark" : "popup-card-light"} rounded-xl border p-3 ${isDarkMode ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-slate-50/80"}`}>
       <h4 className={`mb-3 text-sm font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{title}</h4>
       {items.length === 0 ? (
         <p className={`text-sm ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{emptyText}</p>
       ) : (
         <div className="space-y-2">
           {items.map((item) => (
-            <div key={item.id} className={`rounded-lg border p-2 ${isDarkMode ? "border-slate-700 bg-slate-900/40" : "border-slate-200 bg-white"}`}>
+            <div key={item.id} className={`popup-card ${isDarkMode ? "popup-card-dark" : "popup-card-light"} rounded-lg border p-2 ${isDarkMode ? "border-slate-700 bg-slate-900/40" : "border-slate-200 bg-white"}`}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className={`truncate text-sm font-medium ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{item.title}</p>
@@ -433,14 +433,14 @@ function ListCard({ title, items, emptyText, isDarkMode }) {
 
 function TableCard({ title, rows, emptyText, isDarkMode }) {
   return (
-    <section className={`rounded-xl border p-3 ${isDarkMode ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-slate-50/80"}`}>
+    <section className={`popup-card ${isDarkMode ? "popup-card-dark" : "popup-card-light"} rounded-xl border p-3 ${isDarkMode ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-slate-50/80"}`}>
       <h4 className={`mb-3 text-sm font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{title}</h4>
       {rows.length === 0 ? (
         <p className={`text-sm ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{emptyText}</p>
       ) : (
         <div className="space-y-2">
           {rows.map((row) => (
-            <div key={row.id} className={`grid grid-cols-1 gap-1 rounded-lg border p-2 text-xs sm:grid-cols-[56px_86px_1fr] sm:items-center sm:gap-2 ${isDarkMode ? "border-slate-700 bg-slate-900/40 text-slate-200" : "border-slate-200 bg-white text-slate-700"}`}>
+            <div key={row.id} className={`popup-card ${isDarkMode ? "popup-card-dark" : "popup-card-light"} grid grid-cols-1 gap-1 rounded-lg border p-2 text-xs sm:grid-cols-[56px_86px_1fr] sm:items-center sm:gap-2 ${isDarkMode ? "border-slate-700 bg-slate-900/40 text-slate-200" : "border-slate-200 bg-white text-slate-700"}`}>
               <span>{row.c1}</span>
               <span className="truncate">{row.c2}</span>
               <span className="break-all">{row.c3}</span>
