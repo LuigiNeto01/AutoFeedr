@@ -23,7 +23,7 @@ export default function ResultDetailPage() {
 
     async function load() {
       if (!normalizedKind || !Number.isInteger(numericId) || numericId <= 0) {
-        setError("Execucao invalida.");
+        setError("Execução inválida.");
         setLoading(false);
         return;
       }
@@ -53,7 +53,7 @@ export default function ResultDetailPage() {
           }
         }
 
-        if (!detail) throw new Error("Execucao nao encontrada.");
+        if (!detail) throw new Error("Execução não encontrada.");
 
         let logsData = null;
         if (normalizedKind === "leetcode") {
@@ -77,7 +77,7 @@ export default function ResultDetailPage() {
             setJob(prefetchedJob);
             setError("");
           } else {
-            setError(getErrorMessage(err, "Falha ao carregar detalhamento da execucao."));
+            setError(getErrorMessage(err, "Falha ao carregar detalhamento da execução."));
           }
         }
       } finally {
@@ -97,7 +97,7 @@ export default function ResultDetailPage() {
   const destination = useMemo(() => {
     if (!job) return "-";
     if (normalizedKind === "linkedin") return accountNameById.get(job.account_id) ?? `Conta #${job.account_id ?? "-"}`;
-    return repoNameById.get(job.repository_id) ?? `Repositorio #${job.repository_id ?? "-"}`;
+    return repoNameById.get(job.repository_id) ?? `Repositório #${job.repository_id ?? "-"}`;
   }, [job, normalizedKind, accountNameById, repoNameById]);
 
   if (loading) {
@@ -109,7 +109,7 @@ export default function ResultDetailPage() {
       <section className={`rounded-3xl border p-5 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className={`text-xs uppercase tracking-[0.22em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Execucao</p>
+            <p className={`text-xs uppercase tracking-[0.22em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Execução</p>
             <h2 className={`mt-1 text-2xl font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Detalhamento</h2>
           </div>
           <Link to="/resultados" className={`rounded-lg px-3 py-2 text-sm font-semibold ${isDarkMode ? "bg-slate-700 text-slate-100 hover:bg-slate-600" : "bg-slate-900 text-white hover:bg-slate-700"}`}>
@@ -134,7 +134,7 @@ export default function ResultDetailPage() {
           <div className="mt-4 space-y-3">
             {normalizedKind === "linkedin" ? (
               <>
-                <Block title="Topico" value={job.topic || "-"} isDarkMode={isDarkMode} />
+                <Block title="Tópico" value={job.topic || "-"} isDarkMode={isDarkMode} />
                 <Block title="Paper URL" value={job.paper_url || "-"} isDarkMode={isDarkMode} />
                 <Block title="Post gerado" value={job.generated_post || "-"} isDarkMode={isDarkMode} />
               </>

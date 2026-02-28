@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 
@@ -12,11 +12,11 @@ const SLOT_HEIGHT = HOUR_HEIGHT / SLOTS_PER_HOUR;
 const WEEK_DAYS = [
   { value: "0", label: "Domingo", short: "Dom" },
   { value: "1", label: "Segunda", short: "Seg" },
-  { value: "2", label: "Terca", short: "Ter" },
+  { value: "2", label: "TerÃ§a", short: "Ter" },
   { value: "3", label: "Quarta", short: "Qua" },
   { value: "4", label: "Quinta", short: "Qui" },
   { value: "5", label: "Sexta", short: "Sex" },
-  { value: "6", label: "Sabado", short: "Sab" },
+  { value: "6", label: "SÃ¡bado", short: "SÃ¡b" },
 ];
 
 const LI_CREATE = {
@@ -38,6 +38,19 @@ const LC_CREATE = {
   is_active: true,
 };
 
+const RUN_NOW_INITIAL = {
+  flow: "linkedin_post",
+  account_id: "",
+  topic: "",
+  paper_url: "",
+  paper_text: "",
+  repository_id: "",
+  selection_strategy: "random",
+  difficulty_policy: "random",
+  problem_slug: "",
+  max_attempts: 2,
+};
+
 function nextRoundedSlot() {
   const now = new Date();
   const minutes = now.getHours() * 60 + now.getMinutes();
@@ -53,6 +66,7 @@ export default function SchedulesPage() {
   const [loading, setLoading] = useState(true);
   const [savingLi, setSavingLi] = useState(false);
   const [savingLc, setSavingLc] = useState(false);
+  const [runningNow, setRunningNow] = useState(false);
   const [busyId, setBusyId] = useState("");
   const [tab, setTab] = useState("linkedin");
   const [error, setError] = useState("");
@@ -63,11 +77,14 @@ export default function SchedulesPage() {
   const [leetcodeSchedules, setLeetcodeSchedules] = useState([]);
   const [liForm, setLiForm] = useState(LI_CREATE);
   const [lcForm, setLcForm] = useState(LC_CREATE);
+  const [runNowForm, setRunNowForm] = useState(RUN_NOW_INITIAL);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isRunNowModalOpen, setIsRunNowModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("create");
   const [editingRow, setEditingRow] = useState(null);
   const [dragState, setDragState] = useState(null);
   const [mobileDay, setMobileDay] = useState(String(new Date().getDay()));
+  const [nowTs, setNowTs] = useState(() => Date.now());
 
   async function loadData({ silent = false } = {}) {
     if (!silent) setLoading(true);
@@ -92,6 +109,11 @@ export default function SchedulesPage() {
 
   useEffect(() => {
     loadData();
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNowTs(Date.now()), 60000);
+    return () => clearInterval(timer);
   }, []);
 
   const scheduleRows = useMemo(() => {
@@ -150,6 +172,17 @@ export default function SchedulesPage() {
     scheduleRows.forEach((row) => grouped.get(row.dayOfWeek)?.push(row));
     return grouped;
   }, [scheduleRows]);
+
+  const nowInfo = useMemo(() => {
+    const now = new Date(nowTs);
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    return {
+      day: now.getDay(),
+      minutes,
+      top: (minutes / 60) * HOUR_HEIGHT,
+      label: minutesToTime(minutes),
+    };
+  }, [nowTs]);
 
   const openCreateModal = ({ dayOfWeek, timeLocal, flow } = {}) => {
     const fallback = nextRoundedSlot();
@@ -216,7 +249,7 @@ export default function SchedulesPage() {
     try {
       const normalizedTimeLocal = sanitizeTimeInput(liForm.time_local);
       if (!isValidLocalTime(normalizedTimeLocal)) {
-        throw new Error("Hora local invalida. Use o formato HH:MM.");
+        throw new Error("HorÃ¡rio local invÃ¡lido. Use o formato HH:MM.");
       }
       const payload = {
         account_id: Number(liForm.account_id),
@@ -253,7 +286,7 @@ export default function SchedulesPage() {
     try {
       const normalizedTimeLocal = sanitizeTimeInput(lcForm.time_local);
       if (!isValidLocalTime(normalizedTimeLocal)) {
-        throw new Error("Hora local invalida. Use o formato HH:MM.");
+        throw new Error("HorÃ¡rio local invÃ¡lido. Use o formato HH:MM.");
       }
       const payload = {
         repository_id: Number(lcForm.repository_id),
@@ -283,26 +316,68 @@ export default function SchedulesPage() {
     }
   };
 
+  const runNow = async (event) => {
+    event.preventDefault();
+    if (runningNow) return;
+    setRunningNow(true);
+    setError("");
+    setSuccess("");
+    try {
+      if (runNowForm.flow === "linkedin_post") {
+        if (!runNowForm.account_id) throw new Error("Selecione uma conta LinkedIn.");
+        if (!runNowForm.topic.trim() && !runNowForm.paper_url.trim() && !runNowForm.paper_text.trim()) {
+          throw new Error("Informe tÃ³pico, Paper URL ou Paper text.");
+        }
+        await api.runLinkedinNow({
+          account_id: Number(runNowForm.account_id),
+          topic: runNowForm.topic.trim() || undefined,
+          paper_url: runNowForm.paper_url.trim() || undefined,
+          paper_text: runNowForm.paper_text.trim() || undefined,
+        });
+      } else {
+        if (!runNowForm.repository_id) throw new Error("Selecione um repositÃ³rio GitHub.");
+        await api.runLeetcodeNow({
+          repository_id: Number(runNowForm.repository_id),
+          selection_strategy: runNowForm.selection_strategy || undefined,
+          difficulty_policy: runNowForm.difficulty_policy || undefined,
+          problem_slug: runNowForm.problem_slug.trim() || undefined,
+          max_attempts: Number(runNowForm.max_attempts) || undefined,
+        });
+      }
+
+      setIsRunNowModalOpen(false);
+      setSuccess("ExecuÃ§Ã£o enfileirada com sucesso.");
+    } catch (err) {
+      setError(getErrorMessage(err, "Falha ao disparar execuÃ§Ã£o manual."));
+    } finally {
+      setRunningNow(false);
+    }
+  };
+
   const toggleActive = async (row, checked) => {
-    if (busyId) return;
+    if (busyId) return false;
     setBusyId(row.uid);
     setError("");
+    setSuccess("");
     try {
       if (row.kind === "linkedin_post") await api.updateLinkedinSchedule(row.id, { is_active: checked });
       else await api.updateLeetcodeSchedule(row.id, { is_active: checked });
       await loadData({ silent: true });
+      setSuccess(`Agendamento ${checked ? "ativado" : "desativado"} com sucesso.`);
+      return true;
     } catch (err) {
       setError(getErrorMessage(err, "Falha ao atualizar status do agendamento."));
+      return false;
     } finally {
       setBusyId("");
     }
   };
 
   const deleteSchedule = async (row) => {
-    if (busyId) return;
+    if (busyId) return false;
     const label = row.kind === "linkedin_post" ? "LinkedIn" : "LeetCode";
-    const shouldDelete = window.confirm(`Excluir agendamento ${label} #${row.id}? Essa acao nao pode ser desfeita.`);
-    if (!shouldDelete) return;
+    const shouldDelete = window.confirm(`Excluir agendamento ${label} #${row.id}? Essa aÃ§Ã£o nÃ£o pode ser desfeita.`);
+    if (!shouldDelete) return false;
 
     setBusyId(row.uid);
     setError("");
@@ -310,13 +385,27 @@ export default function SchedulesPage() {
     try {
       if (row.kind === "linkedin_post") await api.deleteLinkedinSchedule(row.id);
       else await api.deleteLeetcodeSchedule(row.id);
-      setSuccess("Agendamento excluido com sucesso.");
+      setSuccess("Agendamento excluÃ­do com sucesso.");
       await loadData({ silent: true });
+      return true;
     } catch (err) {
       setError(getErrorMessage(err, "Falha ao excluir agendamento."));
+      return false;
     } finally {
       setBusyId("");
     }
+  };
+
+  const handleModalToggleActive = async () => {
+    if (!editingRow) return;
+    const toggled = await toggleActive(editingRow, !editingRow.isActive);
+    if (toggled) closeModal();
+  };
+
+  const handleModalDelete = async () => {
+    if (!editingRow) return;
+    const deleted = await deleteSchedule(editingRow);
+    if (deleted) closeModal();
   };
 
   const startDrag = (day, slot, flow = tab) => {
@@ -363,15 +452,37 @@ export default function SchedulesPage() {
       {success ? <Message tone="success" text={success} isDarkMode={isDarkMode} /> : null}
 
       <section className={`rounded-2xl border p-4 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
-        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className={`text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Calendario de automacoes</h3>
-          <div className={`inline-flex w-full rounded-xl border p-1 text-xs sm:w-auto ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-300 bg-slate-50"}`}>
-            <Chip active={tab === "linkedin"} onClick={() => setTab("linkedin")} isDarkMode={isDarkMode}>Selecionar: LinkedIn</Chip>
-            <Chip active={tab === "leetcode"} onClick={() => setTab("leetcode")} isDarkMode={isDarkMode}>Selecionar: LeetCode</Chip>
+        <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h3 className={`text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>CalendÃ¡rio de agendamentos</h3>
+            <p className={`text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
+              Timezone fixa: {DEFAULT_TIMEZONE}
+            </p>
+          </div>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <button
+              type="button"
+              onClick={() => setIsRunNowModalOpen(true)}
+              className={`rounded-xl px-3 py-2 text-sm font-semibold text-white transition ${isDarkMode ? "bg-sky-600 hover:bg-sky-500" : "bg-slate-900 hover:bg-slate-700"}`}
+            >
+              Executar agora
+            </button>
+            <button
+              type="button"
+              onClick={() => openCreateModal({ flow: tab })}
+              className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${isDarkMode ? "bg-slate-700 text-slate-100 hover:bg-slate-600" : "bg-slate-200 text-slate-800 hover:bg-slate-300"}`}
+            >
+              Novo agendamento
+            </button>
           </div>
         </div>
 
-        <div className="mb-4 space-y-3 md:hidden">
+        <div className={`inline-flex w-full rounded-xl border p-1 text-xs sm:w-auto ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-300 bg-slate-50"}`}>
+          <Chip active={tab === "linkedin"} onClick={() => setTab("linkedin")} isDarkMode={isDarkMode}>Selecionar: LinkedIn</Chip>
+          <Chip active={tab === "leetcode"} onClick={() => setTab("leetcode")} isDarkMode={isDarkMode}>Selecionar: LeetCode</Chip>
+        </div>
+
+        <div className="mb-4 mt-4 space-y-3 md:hidden">
           <div className="overflow-x-auto pb-1">
             <div className="inline-flex min-w-full gap-1">
               {WEEK_DAYS.map((day) => (
@@ -395,13 +506,6 @@ export default function SchedulesPage() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => openCreateModal({ flow: tab })}
-            className={`w-full rounded-xl px-3 py-2 text-sm font-semibold text-white transition ${isDarkMode ? "bg-sky-600 hover:bg-sky-500" : "bg-slate-900 hover:bg-slate-700"}`}
-          >
-            Novo agendamento
-          </button>
           {(() => {
             const selectedDay = WEEK_DAYS.find((day) => day.value === mobileDay) || WEEK_DAYS[0];
             const selectedDayNum = Number(selectedDay.value);
@@ -419,16 +523,15 @@ export default function SchedulesPage() {
                   </button>
                 </div>
                 {events.length === 0 ? (
-                  <p className={`text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Sem agendamentos</p>
+                  <p className={`text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Sem agendamentos.</p>
                 ) : (
                   <div className="space-y-2">
-                    {events.map((event) => (
-                      <div key={event.uid} className={`rounded-lg border p-2 ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
-                        <p className={`text-xs font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{event.timeLocal} - {event.destination}</p>
+                    {events.map((eventItem) => (
+                      <div key={eventItem.uid} className={`rounded-lg border p-2 ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
+                        <p className={`text-xs font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{eventItem.timeLocal}</p>
+                        <p className={`text-xs ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>{eventItem.destination}</p>
                         <div className="mt-2 flex flex-wrap gap-1">
-                          <button type="button" onClick={() => openEditModal(event)} className={`rounded px-2 py-0.5 text-[10px] font-medium ${isDarkMode ? "bg-slate-700 text-slate-200 hover:bg-slate-600" : "bg-slate-200 text-slate-800 hover:bg-slate-300"}`}>Editar</button>
-                          <button type="button" disabled={busyId === event.uid} onClick={() => toggleActive(event, !event.isActive)} className={`rounded px-2 py-0.5 text-[10px] font-medium ${event.isActive ? (isDarkMode ? "bg-emerald-700/70 text-emerald-100" : "bg-emerald-200 text-emerald-800") : (isDarkMode ? "bg-slate-700 text-slate-300" : "bg-slate-200 text-slate-700")}`}>{event.isActive ? "Ativo" : "Inativo"}</button>
-                          <button type="button" disabled={busyId === event.uid} onClick={() => deleteSchedule(event)} className={`rounded px-2 py-0.5 text-[10px] font-medium ${isDarkMode ? "bg-red-900/50 text-red-200 hover:bg-red-900/70" : "bg-red-100 text-red-700 hover:bg-red-200"}`}>Excluir</button>
+                          <button type="button" onClick={() => openEditModal(eventItem)} className={`rounded px-2 py-0.5 text-[10px] font-medium ${isDarkMode ? "bg-slate-700 text-slate-200 hover:bg-slate-600" : "bg-slate-200 text-slate-800 hover:bg-slate-300"}`}>Editar</button>
                         </div>
                       </div>
                     ))}
@@ -467,6 +570,7 @@ export default function SchedulesPage() {
                 {WEEK_DAYS.map((day) => {
                   const dayNum = Number(day.value);
                   const events = rowsByDay.get(dayNum) || [];
+                  const isToday = dayNum === nowInfo.day;
                   return (
                     <div
                       key={day.value}
@@ -490,41 +594,35 @@ export default function SchedulesPage() {
                         />
                       ))}
 
-                      {events.map((event) => (
+                      {isToday ? (
+                        <div className="pointer-events-none absolute left-0 right-0 z-20" style={{ top: Math.max(0, nowInfo.top - 1) }}>
+                          <div className={`h-1 ${isDarkMode ? "bg-slate-500/90" : "bg-slate-700/80"}`} />
+                          <span className={`absolute -top-5 right-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${isDarkMode ? "bg-slate-700 text-slate-100" : "bg-slate-900 text-white"}`}>
+                            Agora {nowInfo.label}
+                          </span>
+                        </div>
+                      ) : null}
+
+                      {events.map((eventItem) => (
                         <article
-                          key={event.uid}
-                          className={`absolute left-1 right-1 z-10 rounded-lg border p-2 shadow-sm ${event.kind === "linkedin_post" ? (isDarkMode ? "border-sky-500/40 bg-sky-900/35" : "border-sky-300 bg-sky-50") : (isDarkMode ? "border-emerald-500/40 bg-emerald-900/35" : "border-emerald-300 bg-emerald-50")}`}
+                          key={eventItem.uid}
+                          className={`absolute left-1 right-1 z-10 overflow-hidden rounded-lg border p-2 shadow-sm ${eventItem.kind === "linkedin_post" ? (isDarkMode ? "border-sky-500/40 bg-sky-900/35" : "border-sky-300 bg-sky-50") : (isDarkMode ? "border-emerald-500/40 bg-emerald-900/35" : "border-emerald-300 bg-emerald-50")}`}
                           style={{
-                            top: Math.max(0, event.minutes / 60 * HOUR_HEIGHT),
-                            minHeight: 58,
+                            top: Math.max(0, eventItem.minutes / 60 * HOUR_HEIGHT),
+                            minHeight: 74,
                           }}
-                          onMouseDown={(e) => e.stopPropagation()}
+                          onMouseDown={(event) => event.stopPropagation()}
                         >
-                          <p className={`text-[10px] font-semibold uppercase tracking-wide ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>{event.kind === "linkedin_post" ? "LinkedIn" : "LeetCode"}</p>
-                          <p className={`truncate text-xs font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{event.timeLocal} • {event.destination}</p>
-                          <div className="mt-1 flex items-center gap-1">
+                          <p className={`text-[10px] font-semibold uppercase tracking-wide ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>{eventItem.kind === "linkedin_post" ? "LinkedIn" : "LeetCode"}</p>
+                          <p className={`mt-0.5 text-[11px] font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{eventItem.timeLocal}</p>
+                          <p className={`truncate text-[11px] ${isDarkMode ? "text-slate-200" : "text-slate-800"}`} title={eventItem.destination}>{eventItem.destination}</p>
+                          <div className="mt-1 grid grid-cols-1 gap-1">
                             <button
                               type="button"
-                              onClick={() => openEditModal(event)}
-                              className={`rounded px-2 py-0.5 text-[10px] font-medium ${isDarkMode ? "bg-slate-700 text-slate-200 hover:bg-slate-600" : "bg-slate-200 text-slate-800 hover:bg-slate-300"}`}
+                              onClick={() => openEditModal(eventItem)}
+                              className={`w-full rounded px-2 py-1 text-[10px] font-medium ${isDarkMode ? "bg-slate-700 text-slate-200 hover:bg-slate-600" : "bg-slate-200 text-slate-800 hover:bg-slate-300"}`}
                             >
                               Editar
-                            </button>
-                            <button
-                              type="button"
-                              disabled={busyId === event.uid}
-                              onClick={() => toggleActive(event, !event.isActive)}
-                              className={`rounded px-2 py-0.5 text-[10px] font-medium ${event.isActive ? (isDarkMode ? "bg-emerald-700/70 text-emerald-100" : "bg-emerald-200 text-emerald-800") : (isDarkMode ? "bg-slate-700 text-slate-300" : "bg-slate-200 text-slate-700")}`}
-                            >
-                              {event.isActive ? "Ativo" : "Inativo"}
-                            </button>
-                            <button
-                              type="button"
-                              disabled={busyId === event.uid}
-                              onClick={() => deleteSchedule(event)}
-                              className={`rounded px-2 py-0.5 text-[10px] font-medium ${isDarkMode ? "bg-red-900/50 text-red-200 hover:bg-red-900/70" : "bg-red-100 text-red-700 hover:bg-red-200"}`}
-                            >
-                              Excluir
                             </button>
                           </div>
                         </article>
@@ -554,7 +652,24 @@ export default function SchedulesPage() {
           savingLi={savingLi}
           savingLc={savingLc}
           mode={modalMode}
+          busyId={busyId}
+          editingRow={editingRow}
+          onToggleActive={handleModalToggleActive}
+          onDelete={handleModalDelete}
           onClose={closeModal}
+        />
+      ) : null}
+
+      {isRunNowModalOpen ? (
+        <RunNowModal
+          isDarkMode={isDarkMode}
+          form={runNowForm}
+          setForm={setRunNowForm}
+          accounts={accounts}
+          repositories={repositories}
+          onClose={() => setIsRunNowModalOpen(false)}
+          onSubmit={runNow}
+          saving={runningNow}
         />
       ) : null}
     </div>
@@ -576,18 +691,23 @@ function CreateScheduleModal({
   savingLi,
   savingLc,
   mode,
+  busyId,
+  editingRow,
+  onToggleActive,
+  onDelete,
   onClose,
 }) {
   const slotLabel = tab === "linkedin"
     ? `${WEEK_DAYS[Number(liForm.day_of_week)]?.label || "-"}, ${liForm.time_local || "-"}`
     : `${WEEK_DAYS[Number(lcForm.day_of_week)]?.label || "-"}, ${lcForm.time_local || "-"}`;
+  const currentActive = tab === "linkedin" ? Boolean(liForm.is_active) : Boolean(lcForm.is_active);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center p-2 sm:items-center sm:p-4">
       <button type="button" onClick={onClose} className="absolute inset-0 bg-black/55" aria-label="Fechar modal" />
       <div className={`relative z-10 max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border p-4 shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
         <h3 className={`mb-1 text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{mode === "edit" ? "Editar agendamento" : "Novo agendamento"}</h3>
-        <p className={`mb-3 text-xs ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Horario selecionado: {slotLabel} • Timezone fixa: {DEFAULT_TIMEZONE}</p>
+        <p className={`mb-3 text-xs ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>HorÃ¡rio selecionado: {slotLabel} â€¢ Timezone fixa: {DEFAULT_TIMEZONE}</p>
 
         {mode !== "edit" ? (
           <div className={`mb-3 inline-flex w-full rounded-xl border p-1 sm:w-auto ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-300 bg-slate-50"}`}>
@@ -596,10 +716,36 @@ function CreateScheduleModal({
           </div>
         ) : null}
 
+        {mode === "edit" && editingRow ? (
+          <section className={`mb-3 rounded-xl border p-3 ${isDarkMode ? "border-slate-700 bg-slate-800/60" : "border-slate-200 bg-slate-50"}`}>
+            <p className={`text-xs font-semibold uppercase tracking-wide ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>AÃ§Ãµes rÃ¡pidas</p>
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                disabled={Boolean(busyId)}
+                onClick={onToggleActive}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition disabled:opacity-60 ${
+                  currentActive ? "bg-amber-700 hover:bg-amber-600" : "bg-emerald-700 hover:bg-emerald-600"
+                }`}
+              >
+                {currentActive ? "Desativar" : "Ativar"}
+              </button>
+              <button
+                type="button"
+                disabled={Boolean(busyId)}
+                onClick={onDelete}
+                className="rounded-xl bg-red-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600 disabled:opacity-60"
+              >
+                Excluir
+              </button>
+            </div>
+          </section>
+        ) : null}
+
         {tab === "linkedin" ? (
           <form className="space-y-3" onSubmit={createLinkedin}>
             <SelectField label="Conta" value={liForm.account_id} onChange={(value) => setLiForm((prev) => ({ ...prev, account_id: value }))} isDarkMode={isDarkMode} options={accounts.map((item) => ({ value: String(item.id), label: item.name }))} />
-            <InputField label="Topico" value={liForm.topic} onChange={(value) => setLiForm((prev) => ({ ...prev, topic: value }))} isDarkMode={isDarkMode} />
+            <InputField label="TÃ³pico" value={liForm.topic} onChange={(value) => setLiForm((prev) => ({ ...prev, topic: value }))} isDarkMode={isDarkMode} />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <SelectField label="Dia" value={liForm.day_of_week} onChange={(value) => setLiForm((prev) => ({ ...prev, day_of_week: value }))} isDarkMode={isDarkMode} options={WEEK_DAYS} />
               <InputField type="time" step={60} label="Hora" value={liForm.time_local} onChange={(value) => setLiForm((prev) => ({ ...prev, time_local: value }))} isDarkMode={isDarkMode} />
@@ -613,7 +759,7 @@ function CreateScheduleModal({
         ) : (
           <form className="space-y-3" onSubmit={createLeetcode}>
             <SelectField
-              label="Repositorio"
+              label="RepositÃ³rio"
               value={lcForm.repository_id}
               onChange={(value) => setLcForm((prev) => ({ ...prev, repository_id: value }))}
               isDarkMode={isDarkMode}
@@ -630,8 +776,8 @@ function CreateScheduleModal({
                 onChange={(value) => setLcForm((prev) => ({ ...prev, selection_strategy: value }))}
                 isDarkMode={isDarkMode}
                 options={[
-                  { value: "random", label: "Aleatorio" },
-                  { value: "easy_first", label: "Faceis primeiro" },
+                  { value: "random", label: "AleatÃ³rio" },
+                  { value: "easy_first", label: "FÃ¡ceis primeiro" },
                   { value: "sequential", label: "Sequencial" },
                 ]}
               />
@@ -641,10 +787,10 @@ function CreateScheduleModal({
                 onChange={(value) => setLcForm((prev) => ({ ...prev, difficulty_policy: value }))}
                 isDarkMode={isDarkMode}
                 options={[
-                  { value: "random", label: "Dificuldade Aleatoria" },
-                  { value: "easy", label: "Faceis" },
-                  { value: "medium", label: "Medio" },
-                  { value: "hard", label: "Dificil" },
+                  { value: "random", label: "Dificuldade aleatÃ³ria" },
+                  { value: "easy", label: "FÃ¡ceis" },
+                  { value: "medium", label: "MÃ©dio" },
+                  { value: "hard", label: "DifÃ­cil" },
                 ]}
               />
             </div>
@@ -656,6 +802,88 @@ function CreateScheduleModal({
             </div>
           </form>
         )}
+
+      </div>
+    </div>
+  );
+}
+
+function RunNowModal({ isDarkMode, form, setForm, accounts, repositories, onClose, onSubmit, saving }) {
+  const isLinkedin = form.flow === "linkedin_post";
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-2 sm:items-center sm:p-4">
+      <button type="button" onClick={onClose} className="absolute inset-0 bg-black/55" aria-label="Fechar modal" />
+      <div className={`relative z-10 max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border p-4 shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
+        <h3 className={`mb-4 text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Executar agora</h3>
+        <form className="space-y-3" onSubmit={onSubmit}>
+          <fieldset className="space-y-2">
+            <legend className={`text-xs font-medium ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>Fluxo</legend>
+            <label className={`flex items-center gap-2 text-sm ${isDarkMode ? "text-slate-200" : "text-slate-700"}`}>
+              <input type="radio" name="flow" value="linkedin_post" checked={form.flow === "linkedin_post"} onChange={(event) => setForm((prev) => ({ ...prev, flow: event.target.value }))} />
+              LinkedIn
+            </label>
+            <label className={`flex items-center gap-2 text-sm ${isDarkMode ? "text-slate-200" : "text-slate-700"}`}>
+              <input type="radio" name="flow" value="leetcode_commit" checked={form.flow === "leetcode_commit"} onChange={(event) => setForm((prev) => ({ ...prev, flow: event.target.value }))} />
+              LeetCode
+            </label>
+          </fieldset>
+
+          {isLinkedin ? (
+            <>
+              <SelectField label="Conta LinkedIn" value={String(form.account_id)} onChange={(value) => setForm((prev) => ({ ...prev, account_id: value }))} isDarkMode={isDarkMode} options={accounts.map((item) => ({ value: String(item.id), label: item.name }))} />
+              <InputField label="TÃ³pico" value={form.topic} onChange={(value) => setForm((prev) => ({ ...prev, topic: value }))} isDarkMode={isDarkMode} />
+              <InputField label="Paper URL" value={form.paper_url} onChange={(value) => setForm((prev) => ({ ...prev, paper_url: value }))} isDarkMode={isDarkMode} />
+              <TextField label="Paper text" value={form.paper_text} onChange={(value) => setForm((prev) => ({ ...prev, paper_text: value }))} rows={3} isDarkMode={isDarkMode} />
+            </>
+          ) : (
+            <>
+              <SelectField
+                label="RepositÃ³rio GitHub"
+                value={String(form.repository_id)}
+                onChange={(value) => setForm((prev) => ({ ...prev, repository_id: value }))}
+                isDarkMode={isDarkMode}
+                options={repositories.map((item) => ({
+                  value: String(item.id),
+                  label: extractRepoName(item.repo_ssh_url),
+                }))}
+              />
+              <div className="grid gap-3 md:grid-cols-2">
+                <SelectField
+                  label="Selection strategy"
+                  value={form.selection_strategy}
+                  onChange={(value) => setForm((prev) => ({ ...prev, selection_strategy: value }))}
+                  isDarkMode={isDarkMode}
+                  options={[
+                    { value: "random", label: "AleatÃ³rio" },
+                    { value: "easy_first", label: "FÃ¡ceis primeiro" },
+                    { value: "sequential", label: "Sequencial" },
+                  ]}
+                />
+                <SelectField
+                  label="Difficulty policy"
+                  value={form.difficulty_policy}
+                  onChange={(value) => setForm((prev) => ({ ...prev, difficulty_policy: value }))}
+                  isDarkMode={isDarkMode}
+                  options={[
+                    { value: "random", label: "Dificuldade aleatÃ³ria" },
+                    { value: "easy", label: "FÃ¡ceis" },
+                    { value: "medium", label: "MÃ©dio" },
+                    { value: "hard", label: "DifÃ­cil" },
+                  ]}
+                />
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <InputField label="Problem slug (opcional)" value={form.problem_slug} onChange={(value) => setForm((prev) => ({ ...prev, problem_slug: value }))} isDarkMode={isDarkMode} />
+                <InputField label="Max attempts" type="number" value={String(form.max_attempts)} onChange={(value) => setForm((prev) => ({ ...prev, max_attempts: Number(value) || 1 }))} isDarkMode={isDarkMode} />
+              </div>
+            </>
+          )}
+
+          <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-2">
+            <button type="submit" disabled={saving} className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${isDarkMode ? "bg-sky-600 hover:bg-sky-500" : "bg-slate-900 hover:bg-slate-700"}`}>{saving ? "Disparando..." : "Executar"}</button>
+            <button type="button" onClick={onClose} className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${isDarkMode ? "bg-slate-700 text-slate-100 hover:bg-slate-600" : "bg-slate-200 text-slate-800 hover:bg-slate-300"}`}>Cancelar</button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -672,51 +900,24 @@ function Message({ tone, text, isDarkMode }) {
   return <div className={`rounded-xl border px-4 py-3 text-sm ${styles}`}>{text}</div>;
 }
 
-function Empty({ text, isDarkMode }) {
-  return <div className={`rounded-xl border border-dashed px-4 py-10 text-center text-sm ${isDarkMode ? "border-slate-700 text-slate-400" : "border-slate-300 text-slate-500"}`}>{text}</div>;
-}
-
 function Chip({ active, onClick, isDarkMode, children }) {
   return <button type="button" onClick={onClick} className={`flex-1 rounded-lg px-3 py-1.5 text-center text-xs font-medium transition sm:flex-none ${active ? (isDarkMode ? "bg-slate-600 text-slate-100" : "bg-white text-slate-900 shadow-sm") : (isDarkMode ? "text-slate-300 hover:bg-slate-700" : "text-slate-600 hover:bg-slate-100")}`}>{children}</button>;
 }
 
 function InputField({ label, value, onChange, isDarkMode, type = "text", step }) {
-  return <label className="block"><span className={`mb-1 block text-xs font-medium ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>{label}</span><input type={type} value={value} step={step} onChange={(e) => onChange(e.target.value)} className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-100 focus:border-sky-500" : "border-slate-300 bg-white text-slate-900 focus:border-slate-900"}`} /></label>;
+  return <label className="block"><span className={`mb-1 block text-xs font-medium ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>{label}</span><input type={type} value={value} step={step} onChange={(event) => onChange(event.target.value)} className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-100 focus:border-sky-500" : "border-slate-300 bg-white text-slate-900 focus:border-slate-900"}`} /></label>;
+}
+
+function TextField({ label, value, onChange, isDarkMode, rows = 3 }) {
+  return <label className="block"><span className={`mb-1 block text-xs font-medium ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>{label}</span><textarea value={value} rows={rows} onChange={(event) => onChange(event.target.value)} className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-100 focus:border-sky-500" : "border-slate-300 bg-white text-slate-900 focus:border-slate-900"}`} /></label>;
 }
 
 function SelectField({ label, value, onChange, options, isDarkMode }) {
-  return <label className="block"><span className={`mb-1 block text-xs font-medium ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>{label}</span><select value={value} onChange={(e) => onChange(e.target.value)} className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-100 focus:border-sky-500" : "border-slate-300 bg-white text-slate-900 focus:border-slate-900"}`}><option value="">Selecionar...</option>{options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>;
+  return <label className="block"><span className={`mb-1 block text-xs font-medium ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-100 focus:border-sky-500" : "border-slate-300 bg-white text-slate-900 focus:border-slate-900"}`}><option value="">Selecionar...</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
 }
 
 function CheckField({ label, checked, onChange, isDarkMode }) {
-  return <label className={`inline-flex items-center gap-2 text-sm ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}><input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />{label}</label>;
-}
-
-function StatusBadge({ active, isDarkMode }) {
-  return <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase ${active ? (isDarkMode ? "bg-emerald-500/20 text-emerald-300" : "bg-emerald-100 text-emerald-700") : (isDarkMode ? "bg-slate-700 text-slate-300" : "bg-slate-200 text-slate-600")}`}>{active ? "Ativo" : "Inativo"}</span>;
-}
-
-function ToggleSwitch({ checked, onChange, disabled, isDarkMode }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full border transition ${
-        checked
-          ? isDarkMode
-            ? "border-emerald-500/70 bg-emerald-500/30"
-            : "border-emerald-400 bg-emerald-200"
-          : isDarkMode
-            ? "border-slate-600 bg-slate-700"
-            : "border-slate-300 bg-slate-200"
-      } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
-    >
-      <span className={`inline-block h-4 w-4 transform rounded-full transition ${checked ? "translate-x-6 bg-emerald-500" : "translate-x-1 bg-white"}`} />
-    </button>
-  );
+  return <label className={`inline-flex items-center gap-2 text-sm ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />{label}</label>;
 }
 
 function extractRepoName(repoSshUrl) {
@@ -776,3 +977,4 @@ function getErrorMessage(err, fallback) {
   if (err instanceof ApiError && typeof err.detail === "string") return err.detail || fallback;
   return err?.message || fallback;
 }
+

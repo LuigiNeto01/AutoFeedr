@@ -34,7 +34,7 @@ export default function ApiKeyPage() {
     if (saving) return;
     const trimmed = keyValue.trim();
     if (!trimmed) {
-      setError("Informe uma chave API valida.");
+      setError("Informe uma chave API válida.");
       return;
     }
 
@@ -82,7 +82,7 @@ export default function ApiKeyPage() {
           Chave API
         </h2>
         <p className={`mt-1 text-sm ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
-          Configure sua chave OpenAI para habilitar automacoes e geracao de conteudo.
+          Configure sua chave OpenAI para habilitar automações e geração de conteúdo.
         </p>
       </section>
 
@@ -92,7 +92,7 @@ export default function ApiKeyPage() {
             Status
           </p>
           <p className={`mt-2 text-xl font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
-            {hasKey ? "Configurada" : "Nao configurada"}
+            {hasKey ? "Configurada" : "Não configurada"}
           </p>
         </div>
       </section>
@@ -155,7 +155,7 @@ function getErrorMessage(err, fallback) {
       if (typeof first === "string") return first;
       if (first && typeof first === "object") {
         const field = Array.isArray(first.loc) ? first.loc[first.loc.length - 1] : "campo";
-        const message = first.msg || "valor invalido";
+        const message = first.msg || "valor inválido";
         return `${field}: ${message}`;
       }
     }

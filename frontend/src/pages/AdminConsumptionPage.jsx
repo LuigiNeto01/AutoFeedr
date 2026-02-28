@@ -99,7 +99,7 @@ export default function AdminConsumptionPage() {
           <div>
             <p className={`text-xs uppercase tracking-[0.22em] ${sub}`}>Admin</p>
             <h2 className={`mt-1 text-2xl font-semibold ${txt}`}>Consumos</h2>
-            <p className={`mt-1 text-sm ${sub}`}>Tokens, custos estimados, modelos mais usados e consumo por usuario.</p>
+            <p className={`mt-1 text-sm ${sub}`}>Tokens, custos estimados, modelos mais usados e consumo por usuário.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -128,7 +128,7 @@ export default function AdminConsumptionPage() {
         <Stat label="Cached input" value={formatInt(overview?.cached_input_tokens ?? 0)} isDarkMode={isDarkMode} />
         <Stat label="Custo estimado (USD)" value={`$${Number(overview?.estimated_cost_usd ?? 0).toFixed(4)}`} isDarkMode={isDarkMode} />
         <Stat label="Provider" value={llmSettings?.provider || "openai"} isDarkMode={isDarkMode} />
-        <Stat label="Modelo padrao" value={llmSettings?.default_model || "-"} isDarkMode={isDarkMode} />
+        <Stat label="Modelo padrão" value={llmSettings?.default_model || "-"} isDarkMode={isDarkMode} />
       </section>
 
       <section className="grid gap-4 xl:grid-cols-12">
@@ -158,19 +158,19 @@ export default function AdminConsumptionPage() {
 
         <div className={`rounded-2xl border p-4 shadow-sm xl:col-span-7 ${panel}`}>
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <h3 className={`mr-auto text-lg font-semibold ${txt}`}>Consumo por usuario</h3>
-            <select value={range} onChange={(e) => setRange(e.target.value)} className={selectClass(isDarkMode)}>
+            <h3 className={`mr-auto text-lg font-semibold ${txt}`}>Consumo por usuário</h3>
+            <select value={range} onChange={(e) => setRange(e.target.value)} className={`${selectClass(isDarkMode)} w-full sm:w-auto`}>
               <option value="7d">7d</option>
               <option value="30d">30d</option>
               <option value="90d">90d</option>
             </select>
-            <select value={granularity} onChange={(e) => setGranularity(e.target.value)} className={selectClass(isDarkMode)}>
-              <option value="daily">Diario</option>
+            <select value={granularity} onChange={(e) => setGranularity(e.target.value)} className={`${selectClass(isDarkMode)} w-full sm:w-auto`}>
+              <option value="daily">Diário</option>
               <option value="weekly">Semanal</option>
               <option value="monthly">Mensal</option>
             </select>
-            <select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)} className={selectClass(isDarkMode)}>
-              <option value="">Top usuarios</option>
+            <select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)} className={`${selectClass(isDarkMode)} w-full sm:w-auto`}>
+              <option value="">Top usuários</option>
               {users.map((user) => (
                 <option key={user.id} value={String(user.id)}>
                   #{user.id} - {user.email}
@@ -181,7 +181,7 @@ export default function AdminConsumptionPage() {
 
           <div className={`h-72 rounded-xl border p-2 ${card}`}>
             {chartData.length === 0 ? (
-              <div className={`flex h-full items-center justify-center text-sm ${sub}`}>Sem dados para o periodo.</div>
+              <div className={`flex h-full items-center justify-center text-sm ${sub}`}>Sem dados para o período.</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
@@ -206,7 +206,7 @@ export default function AdminConsumptionPage() {
       </section>
 
       <section className={`rounded-2xl border p-4 shadow-sm ${panel}`}>
-        <h3 className={`mb-3 text-lg font-semibold ${txt}`}>Ranking por usuario</h3>
+        <h3 className={`mb-3 text-lg font-semibold ${txt}`}>Ranking por usuário</h3>
         {(usersTable || []).length === 0 ? (
           <p className={`rounded-xl border p-4 text-sm ${card} ${sub}`}>Sem dados de consumo registrados.</p>
         ) : (
@@ -304,10 +304,10 @@ function AdminLlmSettingsModal({ open, onClose, isDarkMode, settings, onSaved })
         })),
       };
       await api.updateAdminLlmSettings(payload);
-      setSuccess("Configuracao central de LLM salva.");
+      setSuccess("Configuração central de LLM salva.");
       await onSaved?.();
     } catch (err) {
-      setError(getErrorMessage(err, "Falha ao salvar configuracao LLM."));
+      setError(getErrorMessage(err, "Falha ao salvar configuração LLM."));
     } finally {
       setSaving(false);
     }
@@ -320,7 +320,7 @@ function AdminLlmSettingsModal({ open, onClose, isDarkMode, settings, onSaved })
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h3 className={`text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Configurar LLM central</h3>
-            <p className={`text-sm ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Chave central da plataforma + lista de modelos disponiveis e pricing por 1M tokens.</p>
+            <p className={`text-sm ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Chave central da plataforma + lista de modelos disponíveis e pricing por 1M tokens.</p>
           </div>
           <button type="button" onClick={onClose} className={`rounded-lg px-3 py-2 text-sm ${isDarkMode ? "bg-slate-700 text-slate-100" : "bg-slate-200 text-slate-800"}`}>Fechar</button>
         </div>
@@ -356,7 +356,7 @@ function AdminLlmSettingsModal({ open, onClose, isDarkMode, settings, onSaved })
 
           <section className={`rounded-xl border p-3 ${isDarkMode ? "border-slate-700 bg-slate-800/40" : "border-slate-200 bg-slate-50"}`}>
             <div className="mb-2 flex items-center justify-between">
-              <h4 className={`text-sm font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Modelos disponiveis</h4>
+              <h4 className={`text-sm font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Modelos disponíveis</h4>
               <button type="button" onClick={addModel} className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold ${isDarkMode ? "bg-sky-600 text-white" : "bg-slate-900 text-white"}`}>Adicionar modelo</button>
             </div>
             <div className="overflow-x-auto">
@@ -402,14 +402,14 @@ function AdminLlmSettingsModal({ open, onClose, isDarkMode, settings, onSaved })
               </table>
             </div>
             <p className={`mt-2 text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
-              Precos em USD por 1M tokens (Input / Cached input / Output). Exemplo atual: gpt-5-nano = 0.05 / 0.005 / 0.40
+              Preços em USD por 1M tokens (Input / Cached input / Output). Exemplo atual: gpt-5-nano = 0.05 / 0.005 / 0.40
             </p>
           </section>
 
           <div className="flex justify-end gap-2">
             <button type="button" onClick={onClose} className={`rounded-xl px-4 py-2 text-sm font-semibold ${isDarkMode ? "bg-slate-700 text-slate-100" : "bg-slate-200 text-slate-800"}`}>Cancelar</button>
             <button type="submit" disabled={saving} className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${isDarkMode ? "bg-sky-600 hover:bg-sky-500" : "bg-slate-900 hover:bg-slate-700"} disabled:opacity-60`}>
-              {saving ? "Salvando..." : "Salvar configuracao"}
+              {saving ? "Salvando..." : "Salvar configuração"}
             </button>
           </div>
         </form>

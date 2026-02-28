@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import { api } from "../lib/api";
 import LineOverview from "../components/charts/LineOverview";
 
@@ -8,6 +9,7 @@ const STATUS_KEYS = ["pending", "running", "retry", "failed", "success"];
 export default function DashboardPage() {
   const outletContext = useOutletContext();
   const isDarkMode = outletContext?.isDarkMode ?? false;
+  const isMobile = useMediaQuery("(max-width: 767px)");
   const [loading, setLoading] = useState(true);
   const hasLoadedOnceRef = useRef(false);
   const [error, setError] = useState("");
@@ -34,14 +36,14 @@ export default function DashboardPage() {
           id: `linkedin-${item.id}`,
           source: "linkedin",
           status: normalizeStatus(item.status),
-          title: item.topic || "Publicacao LinkedIn",
+          title: item.topic || "Publicação LinkedIn",
           createdAt: item.created_at,
         }));
         const normalizedLeetcode = (leetcodeJobs ?? []).map((item) => ({
           id: `leetcode-${item.id}`,
           source: "leetcode",
           status: normalizeStatus(item.status),
-          title: item.problem_title || item.problem_slug || "Execucao LeetCode",
+          title: item.problem_title || item.problem_slug || "Execução LeetCode",
           createdAt: item.created_at,
         }));
 
@@ -112,16 +114,16 @@ export default function DashboardPage() {
             <p className={`text-xs uppercase tracking-[0.25em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Dashboard</p>
             <h2 className={`mt-2 text-2xl font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Painel operacional</h2>
             <p className={`mt-1 text-sm ${isDarkMode ? "text-slate-300" : "text-slate-600"}`}>
-              Visao das ultimas 24 horas com tendencia e status dos jobs.
+              Visão das últimas 24 horas com tendência e status dos jobs.
             </p>
           </div>
           <Link
-            to="/execucoes"
+            to="/agendamentos"
             className={`rounded-full px-4 py-2 text-sm font-medium text-white transition ${
               isDarkMode ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-900 hover:bg-slate-700"
             }`}
           >
-            Ver execucoes
+            Ver agendamentos
           </Link>
         </div>
       </section>
@@ -132,23 +134,15 @@ export default function DashboardPage() {
         ))}
       </section>
 
-      <section className={`rounded-3xl border p-5 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
-        <div className="mb-4">
-          <h3 className={`text-base font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Tendencia de execucoes</h3>
-          <p className={`text-sm ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Blocos de 1 hora com todos os status</p>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
-          <LineOverview isDarkMode={isDarkMode} dataset={chartDataset} />
-          <aside className="space-y-2">
-            <p className={`mb-1 text-center text-[11px] uppercase tracking-[0.18em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
-              distribuicao por status
-            </p>
+      {isMobile ? (
+        <section className={`rounded-3xl border p-5 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
+          <div className="mb-4">
+            <h3 className={`text-base font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Resumo móvel</h3>
+            <p className={`text-sm ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>No celular, mostramos um resumo no lugar do gráfico.</p>
+          </div>
+          <div className="space-y-2">
             <InfoPill label="API" value={health?.status === "ok" ? "Online" : "Offline"} isDarkMode={isDarkMode} />
-            <InfoPill
-              label="Fila ativa"
-              value={`${counters.pending + counters.running + counters.retry}`}
-              isDarkMode={isDarkMode}
-            />
+            <InfoPill label="Fila ativa" value={`${counters.pending + counters.running + counters.retry}`} isDarkMode={isDarkMode} />
             <InfoPill label="Sucesso" value={`${successRate}%`} isDarkMode={isDarkMode} />
             <div className={`mt-2 rounded-2xl border p-3 ${isDarkMode ? "border-slate-700 bg-slate-800/60" : "border-slate-200 bg-slate-50"}`}>
               <p className={`mb-2 text-center text-[11px] uppercase tracking-[0.18em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
@@ -160,12 +154,44 @@ export default function DashboardPage() {
                 ))}
               </div>
             </div>
-          </aside>
-        </div>
-      </section>
+          </div>
+        </section>
+      ) : (
+        <section className={`rounded-3xl border p-5 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
+          <div className="mb-4">
+            <h3 className={`text-base font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Tendência de execuções</h3>
+            <p className={`text-sm ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Blocos de 1 hora com todos os status.</p>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+            <LineOverview isDarkMode={isDarkMode} dataset={chartDataset} />
+            <aside className="space-y-2">
+              <p className={`mb-1 text-center text-[11px] uppercase tracking-[0.18em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
+                distribuição por status
+              </p>
+              <InfoPill label="API" value={health?.status === "ok" ? "Online" : "Offline"} isDarkMode={isDarkMode} />
+              <InfoPill
+                label="Fila ativa"
+                value={`${counters.pending + counters.running + counters.retry}`}
+                isDarkMode={isDarkMode}
+              />
+              <InfoPill label="Sucesso" value={`${successRate}%`} isDarkMode={isDarkMode} />
+              <div className={`mt-2 rounded-2xl border p-3 ${isDarkMode ? "border-slate-700 bg-slate-800/60" : "border-slate-200 bg-slate-50"}`}>
+                <p className={`mb-2 text-center text-[11px] uppercase tracking-[0.18em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
+                  Indicadores
+                </p>
+                <div className="space-y-1.5">
+                  {STATUS_KEYS.map((status) => (
+                    <StatusRow key={status} status={status} value={counters[status]} isDarkMode={isDarkMode} />
+                  ))}
+                </div>
+              </div>
+            </aside>
+          </div>
+        </section>
+      )}
 
       <section className={`rounded-3xl border p-5 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
-        <h3 className={`mb-3 text-base font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Ultimas execucoes</h3>
+        <h3 className={`mb-3 text-base font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Últimas execuções</h3>
         <div className="space-y-2">
           {latest.length ? (
             latest.map((item) => (
@@ -186,7 +212,7 @@ export default function DashboardPage() {
               </div>
             ))
           ) : (
-            <p className={`text-sm ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Ainda sem execucoes registradas.</p>
+            <p className={`text-sm ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Ainda sem execuções registradas.</p>
           )}
         </div>
       </section>
@@ -199,7 +225,7 @@ function KpiCard({ label, value, isDarkMode }) {
     <div className={`rounded-2xl border px-4 py-4 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
       <p className={`text-[11px] uppercase tracking-[0.2em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{label}</p>
       <p className={`mt-2 text-2xl font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{value}</p>
-      <p className={`text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>ultimas 24h</p>
+      <p className={`text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>últimas 24h</p>
     </div>
   );
 }

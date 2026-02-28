@@ -38,7 +38,7 @@ export default function ApiKeyModal({ open, onClose, isDarkMode = false }) {
     if (saving) return;
     const trimmed = keyValue.trim();
     if (!trimmed) {
-      setError("Informe uma chave API valida.");
+      setError("Informe uma chave API válida.");
       return;
     }
 
@@ -154,7 +154,7 @@ function getErrorMessage(err, fallback) {
       if (typeof first === "string") return first;
       if (first && typeof first === "object") {
         const field = Array.isArray(first.loc) ? first.loc[first.loc.length - 1] : "campo";
-        const message = first.msg || "valor invalido";
+        const message = first.msg || "valor inválido";
         return `${field}: ${message}`;
       }
     }

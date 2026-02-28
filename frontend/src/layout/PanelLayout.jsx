@@ -6,14 +6,12 @@ import { PANEL_NAV_ITEMS, getActiveKey, getActiveLabel } from "./panelNavigation
 import { api } from "../lib/api";
 import { clearAccessToken } from "../lib/session";
 import { applyTheme, getSavedTheme, saveTheme } from "../lib/theme";
-import ApiKeyModal from "../components/modals/ApiKeyModal";
 
 export default function PanelLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return getSavedTheme() === "dark";
@@ -23,30 +21,10 @@ export default function PanelLayout() {
   const pageTitle = useMemo(() => getActiveLabel(location.pathname), [location.pathname]);
   const navItems = useMemo(() => {
     const isAdmin = (user?.role ?? "user") === "admin";
-    return PANEL_NAV_ITEMS
-      .filter((item) => (isAdmin ? true : item.key !== "admin"))
-      .map((item) => {
-        if (item.key !== "contas") return item;
-        return {
-          ...item,
-          children: (item.children || []).filter((child) =>
-            isAdmin ? true : child.key !== "contas-chave-api",
-          ),
-        };
-      });
+    return PANEL_NAV_ITEMS.filter((item) => (isAdmin ? true : item.key !== "admin"));
   }, [user]);
 
   const handleSelect = (item) => {
-    if (item?.key === "contas-chave-api") {
-      if ((user?.role ?? "user") !== "admin") {
-        navigate("/configuracoes/prompts");
-        setIsMobileSidebarOpen(false);
-        return;
-      }
-      setIsApiKeyModalOpen(true);
-      setIsMobileSidebarOpen(false);
-      return;
-    }
     navigate(item.href);
     setIsMobileSidebarOpen(false);
   };
@@ -156,11 +134,6 @@ export default function PanelLayout() {
         </div>
       ) : null}
 
-      <ApiKeyModal
-        open={isApiKeyModalOpen}
-        onClose={() => setIsApiKeyModalOpen(false)}
-        isDarkMode={isDarkMode}
-      />
     </div>
   );
 }

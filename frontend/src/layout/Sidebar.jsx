@@ -21,11 +21,8 @@ const ICONS = {
   contas: HiOutlineBriefcase,
   "contas-linkedin": HiOutlineBriefcase,
   "contas-github": HiOutlineDocumentText,
-  "contas-chave-api": HiOutlineCog6Tooth,
   execucao: HiOutlineDocumentText,
-  "execucao-automacoes": HiOutlineDocumentText,
   resultados: HiOutlineDocumentText,
-  "executar-agora": HiOutlineDocumentText,
   agendamentos: HiOutlineDocumentText,
   configuracoes: HiOutlineCog6Tooth,
   prompts: HiOutlineDocumentText,
@@ -104,7 +101,7 @@ function UserDock({
   isDarkMode = false,
   onToggleDarkMode,
 }) {
-  const userName = user?.name ?? "Usuario";
+  const userName = user?.name ?? "Usuário";
   const userEmail = user?.email ?? "";
 
   const handleLogout = () => {
@@ -138,7 +135,7 @@ function UserDock({
         <>
           <button
             type="button"
-            aria-label="Configuracoes"
+            aria-label="Configurações"
             onClick={onToggleActions}
             className={`inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg p-2 transition-colors ${
               isDarkMode ? "text-slate-300 hover:bg-slate-800 hover:text-slate-100" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"

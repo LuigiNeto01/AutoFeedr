@@ -215,7 +215,7 @@ export default function GithubAccountsPage() {
       setRepoCreateForm(REPO_CREATE);
       await loadData({ silent: true });
     } catch (err) {
-      setError(getErrorMessage(err, "Falha ao criar repositorio."));
+      setError(getErrorMessage(err, "Falha ao criar repositório."));
     } finally {
       setSavingRepo(false);
     }
@@ -241,7 +241,7 @@ export default function GithubAccountsPage() {
       setEditingRepo(null);
       await loadData({ silent: true });
     } catch (err) {
-      setError(getErrorMessage(err, "Falha ao atualizar repositorio."));
+      setError(getErrorMessage(err, "Falha ao atualizar repositório."));
     } finally {
       setSavingRepo(false);
     }
@@ -249,13 +249,13 @@ export default function GithubAccountsPage() {
 
   const removeRepo = async (repo) => {
     if (busyRepoId) return;
-    if (!window.confirm(`Excluir repositorio "${repo.repo_ssh_url}"?`)) return;
+    if (!window.confirm(`Excluir repositório "${repo.repo_ssh_url}"?`)) return;
     setBusyRepoId(repo.id);
     try {
       await api.deleteGithubRepository(repo.id);
       await loadData({ silent: true });
     } catch (err) {
-      setError(getErrorMessage(err, "Falha ao excluir repositorio."));
+      setError(getErrorMessage(err, "Falha ao excluir repositório."));
     } finally {
       setBusyRepoId(null);
     }
@@ -268,7 +268,7 @@ export default function GithubAccountsPage() {
       await api.updateGithubRepository(repo.id, { is_active: checked });
       await loadData({ silent: true });
     } catch (err) {
-      setError(getErrorMessage(err, "Falha ao alterar status do repositorio."));
+      setError(getErrorMessage(err, "Falha ao alterar status do repositório."));
     } finally {
       setBusyRepoId(null);
     }
@@ -290,7 +290,7 @@ export default function GithubAccountsPage() {
           <div>
             <p className={`text-xs uppercase tracking-[0.22em] ${sub}`}>Contas</p>
             <h2 className={`mt-1 text-2xl font-semibold ${txt}`}>GitHub</h2>
-            <p className={`mt-1 text-sm ${sub}`}>Mesma ideia da LinkedIn, agora para contas SSH e repositorios.</p>
+            <p className={`mt-1 text-sm ${sub}`}>Mesma ideia do LinkedIn, agora para contas SSH e repositórios.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => loadData({ silent: true })} className={`rounded-lg border px-3 py-2 text-sm transition ${isDarkMode ? "border-slate-600 text-slate-200 hover:bg-slate-800" : "border-slate-300 text-slate-700 hover:bg-slate-100"}`}>{refreshing ? "Atualizando..." : "Atualizar"}</button>
@@ -301,7 +301,7 @@ export default function GithubAccountsPage() {
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Contas" value={stats.aTotal} isDarkMode={isDarkMode} />
         <Stat label="Contas ativas" value={stats.aActive} isDarkMode={isDarkMode} />
-        <Stat label="Repositorios" value={stats.rTotal} isDarkMode={isDarkMode} />
+        <Stat label="Repositórios" value={stats.rTotal} isDarkMode={isDarkMode} />
         <Stat label="Repos ativos" value={stats.rActive} isDarkMode={isDarkMode} />
       </section>
 
@@ -340,11 +340,11 @@ export default function GithubAccountsPage() {
 
         <div className={`rounded-2xl border p-4 shadow-sm lg:col-span-8 ${mobileTab === "repositories" ? "block" : "hidden md:block"} ${panel}`}>
           <div className="mb-3 flex items-center justify-between gap-2">
-            <h3 className={`text-lg font-semibold ${txt}`}>Repositorios</h3>
-            <button type="button" onClick={() => setCreateRepoOpen(true)} disabled={!accounts.length} className={`rounded-lg px-3 py-2 text-sm font-semibold text-white transition disabled:opacity-60 ${isDarkMode ? "bg-emerald-600 hover:bg-emerald-500" : "bg-emerald-700 hover:bg-emerald-600"}`}>Novo repositorio</button>
+            <h3 className={`text-lg font-semibold ${txt}`}>Repositórios</h3>
+            <button type="button" onClick={() => setCreateRepoOpen(true)} disabled={!accounts.length} className={`rounded-lg px-3 py-2 text-sm font-semibold text-white transition disabled:opacity-60 ${isDarkMode ? "bg-emerald-600 hover:bg-emerald-500" : "bg-emerald-700 hover:bg-emerald-600"}`}>Novo repositório</button>
           </div>
           <div className="mb-4 flex flex-col gap-3 md:flex-row">
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar repositorio, autor ou conta..." className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:border-sky-500" : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 focus:border-slate-900"}`} />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar repositório, autor ou conta..." className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:border-sky-500" : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 focus:border-slate-900"}`} />
             <div className={`inline-flex w-full rounded-xl border p-1 md:w-auto ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-300 bg-slate-50"}`}>
               <Chip active={filter === "all"} onClick={() => setFilter("all")} isDarkMode={isDarkMode}>Todos</Chip>
               <Chip active={filter === "active"} onClick={() => setFilter("active")} isDarkMode={isDarkMode}>Ativos</Chip>
@@ -352,7 +352,7 @@ export default function GithubAccountsPage() {
             </div>
           </div>
 
-          {filteredRepos.length === 0 ? <Empty text="Nenhum repositorio encontrado para os filtros atuais." isDarkMode={isDarkMode} /> : (
+          {filteredRepos.length === 0 ? <Empty text="Nenhum repositório encontrado para os filtros atuais." isDarkMode={isDarkMode} /> : (
             <div className="grid gap-3 md:grid-cols-2">
               {filteredRepos.map((r) => (
                 <article key={r.id} className={`rounded-2xl border p-4 transition ${card}`}>
@@ -367,7 +367,7 @@ export default function GithubAccountsPage() {
                   <div className="mb-3 flex flex-wrap gap-2 text-[10px]">
                     <span className={`rounded-full px-2 py-1 ${isDarkMode ? "bg-slate-700 text-slate-300" : "bg-slate-200 text-slate-600"}`}>Branch: {r.default_branch}</span>
                     <span className={`rounded-full px-2 py-1 ${isDarkMode ? "bg-slate-700 text-slate-300" : "bg-slate-200 text-slate-600"}`}>Dir: {r.solutions_dir}</span>
-                    <span className={`rounded-full px-2 py-1 ${isDarkMode ? "bg-slate-700 text-slate-300" : "bg-slate-200 text-slate-600"}`}>Estrategia: {r.selection_strategy}</span>
+                    <span className={`rounded-full px-2 py-1 ${isDarkMode ? "bg-slate-700 text-slate-300" : "bg-slate-200 text-slate-600"}`}>Estratégia: {r.selection_strategy}</span>
                     <span className={`rounded-full px-2 py-1 ${isDarkMode ? "bg-slate-700 text-slate-300" : "bg-slate-200 text-slate-600"}`}>Dificuldade: {r.difficulty_policy}</span>
                   </div>
                   <p className={`mb-3 text-xs ${sub}`}>Autor: {r.commit_author_name} ({r.commit_author_email})</p>
@@ -387,9 +387,9 @@ export default function GithubAccountsPage() {
       </section>
 
       {createAccountOpen ? <AccountModal isDarkMode={isDarkMode} title="Nova conta GitHub" submit={savingAccount ? "Criando..." : "Criar conta"} form={accountCreateForm} setForm={setAccountCreateForm} onSubmit={createAccount} onClose={() => setCreateAccountOpen(false)} saving={savingAccount} showName requireKey /> : null}
-      {editAccountOpen ? <AccountModal isDarkMode={isDarkMode} title={`Editar: ${editingAccount?.name ?? "conta"}`} submit={savingAccount ? "Salvando..." : "Salvar alteracoes"} form={accountEditForm} setForm={setAccountEditForm} onSubmit={updateAccount} onClose={() => { setEditAccountOpen(false); setEditingAccount(null); }} saving={savingAccount} /> : null}
-      {createRepoOpen ? <RepoModal isDarkMode={isDarkMode} title="Novo repositorio" submit={savingRepo ? "Criando..." : "Criar repositorio"} form={repoCreateForm} setForm={setRepoCreateForm} onSubmit={createRepo} onClose={() => setCreateRepoOpen(false)} saving={savingRepo} accounts={accounts} showRepoUrl /> : null}
-      {editRepoOpen ? <RepoModal isDarkMode={isDarkMode} title={`Editar: ${editingRepo?.repo_ssh_url ?? "repositorio"}`} submit={savingRepo ? "Salvando..." : "Salvar alteracoes"} form={repoEditForm} setForm={setRepoEditForm} onSubmit={updateRepo} onClose={() => { setEditRepoOpen(false); setEditingRepo(null); }} saving={savingRepo} accounts={accounts} /> : null}
+      {editAccountOpen ? <AccountModal isDarkMode={isDarkMode} title={`Editar: ${editingAccount?.name ?? "conta"}`} submit={savingAccount ? "Salvando..." : "Salvar alterações"} form={accountEditForm} setForm={setAccountEditForm} onSubmit={updateAccount} onClose={() => { setEditAccountOpen(false); setEditingAccount(null); }} saving={savingAccount} /> : null}
+      {createRepoOpen ? <RepoModal isDarkMode={isDarkMode} title="Novo repositório" submit={savingRepo ? "Criando..." : "Criar repositório"} form={repoCreateForm} setForm={setRepoCreateForm} onSubmit={createRepo} onClose={() => setCreateRepoOpen(false)} saving={savingRepo} accounts={accounts} showRepoUrl /> : null}
+      {editRepoOpen ? <RepoModal isDarkMode={isDarkMode} title={`Editar: ${editingRepo?.repo_ssh_url ?? "repositório"}`} submit={savingRepo ? "Salvando..." : "Salvar alterações"} form={repoEditForm} setForm={setRepoEditForm} onSubmit={updateRepo} onClose={() => { setEditRepoOpen(false); setEditingRepo(null); }} saving={savingRepo} accounts={accounts} /> : null}
     </div>
   );
 }
@@ -425,18 +425,18 @@ function RepoModal({ title, submit, form, setForm, onSubmit, onClose, isDarkMode
           <Select label="Conta" value={form.account_id} onChange={(v) => setForm((p) => ({ ...p, account_id: v }))} options={accounts.map((a) => ({ value: String(a.id), label: a.name }))} isDarkMode={isDarkMode} />
           {showRepoUrl ? <Field label="Repo SSH URL" value={form.repo_ssh_url} onChange={(v) => setForm((p) => ({ ...p, repo_ssh_url: v }))} isDarkMode={isDarkMode} /> : null}
           <div className="grid gap-3 md:grid-cols-2">
-            <Field label="Branch padrao" value={form.default_branch} onChange={(v) => setForm((p) => ({ ...p, default_branch: v }))} isDarkMode={isDarkMode} />
-            <Field label="Diretorio de solucoes" value={form.solutions_dir} onChange={(v) => setForm((p) => ({ ...p, solutions_dir: v }))} isDarkMode={isDarkMode} />
+            <Field label="Branch padrão" value={form.default_branch} onChange={(v) => setForm((p) => ({ ...p, default_branch: v }))} isDarkMode={isDarkMode} />
+            <Field label="Diretório de soluções" value={form.solutions_dir} onChange={(v) => setForm((p) => ({ ...p, solutions_dir: v }))} isDarkMode={isDarkMode} />
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <Field label="Autor" value={form.commit_author_name} onChange={(v) => setForm((p) => ({ ...p, commit_author_name: v }))} isDarkMode={isDarkMode} />
             <Field label="Email autor" value={form.commit_author_email} onChange={(v) => setForm((p) => ({ ...p, commit_author_email: v }))} isDarkMode={isDarkMode} />
           </div>
           <div className="grid gap-3 md:grid-cols-2">
-            <Select label="Estrategia" value={form.selection_strategy} onChange={(v) => setForm((p) => ({ ...p, selection_strategy: v }))} options={STRATEGIES.map((s) => ({ value: s, label: s }))} isDarkMode={isDarkMode} />
-            <Select label="Politica dificuldade" value={form.difficulty_policy} onChange={(v) => setForm((p) => ({ ...p, difficulty_policy: v }))} options={DIFFICULTIES.map((d) => ({ value: d, label: d }))} isDarkMode={isDarkMode} />
+            <Select label="Estratégia" value={form.selection_strategy} onChange={(v) => setForm((p) => ({ ...p, selection_strategy: v }))} options={STRATEGIES.map((s) => ({ value: s, label: s }))} isDarkMode={isDarkMode} />
+            <Select label="Política de dificuldade" value={form.difficulty_policy} onChange={(v) => setForm((p) => ({ ...p, difficulty_policy: v }))} options={DIFFICULTIES.map((d) => ({ value: d, label: d }))} isDarkMode={isDarkMode} />
           </div>
-          <label className={`inline-flex items-center gap-2 text-sm ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}><input type="checkbox" checked={form.is_active} onChange={(e) => setForm((p) => ({ ...p, is_active: e.target.checked }))} />Repositorio ativo</label>
+          <label className={`inline-flex items-center gap-2 text-sm ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}><input type="checkbox" checked={form.is_active} onChange={(e) => setForm((p) => ({ ...p, is_active: e.target.checked }))} />Repositório ativo</label>
           <div className="grid grid-cols-1 gap-2 pt-2 sm:grid-cols-2">
             <button type="submit" disabled={saving} className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${isDarkMode ? "bg-emerald-600 hover:bg-emerald-500" : "bg-emerald-700 hover:bg-emerald-600"}`}>{submit}</button>
             <button type="button" onClick={onClose} className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${isDarkMode ? "bg-slate-700 text-slate-100 hover:bg-slate-600" : "bg-slate-200 text-slate-800 hover:bg-slate-300"}`}>Cancelar</button>
@@ -498,7 +498,7 @@ function getErrorMessage(err, fallback) {
     if (Array.isArray(err.detail)) {
       const first = err.detail[0];
       if (typeof first === "string") return first;
-      if (first && typeof first === "object") return `${(first.loc || []).at(-1) ?? "campo"}: ${first.msg || "valor invalido"}`;
+      if (first && typeof first === "object") return `${(first.loc || []).at(-1) ?? "campo"}: ${first.msg || "valor inválido"}`;
     }
   }
   return err?.message || fallback;

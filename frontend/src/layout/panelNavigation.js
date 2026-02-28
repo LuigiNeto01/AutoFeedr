@@ -6,22 +6,19 @@ export const PANEL_NAV_ITEMS = [
     children: [
       { key: "contas-linkedin", label: "LinkedIn", href: "/contas/linkedin" },
       { key: "contas-github", label: "GitHub", href: "/contas/github" },
-      { key: "contas-chave-api", label: "Chave API", href: "/contas/chave-api" },
     ],
   },
   {
     key: "execucao",
-    label: "Execucao",
+    label: "Execução",
     children: [
-      { key: "execucao-automacoes", label: "Automacoes", href: "/execucoes" },
       { key: "resultados", label: "Resultados", href: "/resultados" },
-      { key: "executar-agora", label: "Executar Agora", href: "/executar-agora" },
       { key: "agendamentos", label: "Agendamentos", href: "/agendamentos" },
     ],
   },
   {
     key: "configuracoes",
-    label: "Configuracoes",
+    label: "Configurações",
     children: [
       { key: "prompts", label: "Prompts", href: "/configuracoes/prompts" },
     ],
@@ -31,8 +28,8 @@ export const PANEL_NAV_ITEMS = [
     label: "Admin",
     children: [
       { key: "admin-dashboard", label: "Dashboard", href: "/admin/dashboard" },
-      { key: "admin-usuarios", label: "Usuarios", href: "/admin/usuarios" },
-      { key: "admin-execucoes", label: "Execucoes", href: "/admin/execucoes" },
+      { key: "admin-usuarios", label: "Usuários", href: "/admin/usuarios" },
+      { key: "admin-execucoes", label: "Execuções", href: "/admin/execucoes" },
       { key: "admin-consumos", label: "Consumos", href: "/admin/consumos" },
     ],
   },

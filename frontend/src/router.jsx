@@ -3,10 +3,7 @@ import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import LinkedinAccountsPage from "./pages/LinkedinAccountsPage";
 import GithubAccountsPage from "./pages/GithubAccountsPage";
-import AutomationsPage from "./pages/AutomationsPage";
 import ResultsPage from "./pages/ResultsPage";
-import ResultDetailPage from "./pages/ResultDetailPage";
-import RunNowPage from "./pages/RunNowPage";
 import SchedulesPage from "./pages/SchedulesPage";
 import PromptsPage from "./pages/PromptsPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
@@ -34,12 +31,12 @@ export const router = createBrowserRouter([
           { path: "/contas/linkedin", element: <LinkedinAccountsPage /> },
           { path: "/contas/github", element: <GithubAccountsPage /> },
           { path: "/contas/chave-api", element: <Navigate to="/contas/linkedin" replace /> },
-          { path: "/automacoes", element: <Navigate to="/execucoes" replace /> },
-          { path: "/execucoes", element: <AutomationsPage /> },
-          { path: "/executar-agora", element: <RunNowPage /> },
+          { path: "/automacoes", element: <Navigate to="/agendamentos" replace /> },
+          { path: "/execucoes", element: <Navigate to="/agendamentos" replace /> },
+          { path: "/executar-agora", element: <Navigate to="/agendamentos" replace /> },
           { path: "/agendamentos", element: <SchedulesPage /> },
           { path: "/resultados", element: <ResultsPage /> },
-          { path: "/resultados/:kind/:id", element: <ResultDetailPage /> },
+          { path: "/resultados/:kind/:id", element: <Navigate to="/resultados" replace /> },
           { path: "/configuracoes", element: <Navigate to="/configuracoes/prompts" replace /> },
           { path: "/configuracoes/prompts", element: <PromptsPage /> },
           { path: "/admin", element: <Navigate to="/admin/dashboard" replace /> },

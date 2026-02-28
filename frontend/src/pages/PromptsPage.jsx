@@ -45,7 +45,7 @@ export default function PromptsPage() {
     event.preventDefault();
     if (saving) return;
     if (solutionPrompt.trim().length < 20) {
-      setError("O prompt deve ter no minimo 20 caracteres.");
+      setError("O prompt deve ter no mínimo 20 caracteres.");
       return;
     }
     setSaving(true);
@@ -56,7 +56,7 @@ export default function PromptsPage() {
         api.updateLeetcodePrompts({ solution_prompt: solutionPrompt.trim() }),
         api.updateLlmPreferences({ selected_model: selectedModel || null }),
       ]);
-      setSuccess("Prompt de solucao LeetCode e modelo preferido atualizados.");
+      setSuccess("Prompt de solução LeetCode e modelo preferido atualizados.");
       const refreshedPrefs = await api.llmPreferences();
       setLlmPrefs(refreshedPrefs ?? null);
     } catch (err) {
@@ -80,22 +80,22 @@ export default function PromptsPage() {
       {success ? <Message tone="success" text={success} isDarkMode={isDarkMode} /> : null}
 
       <section className={`rounded-3xl border p-5 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
-        <p className={`text-xs uppercase tracking-[0.22em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Configuracoes</p>
+        <p className={`text-xs uppercase tracking-[0.22em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Configurações</p>
         <h2 className={`mt-1 text-2xl font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Prompts</h2>
-        <p className={`mt-1 text-sm ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Visualize defaults e ajuste o prompt de solucao LeetCode.</p>
+        <p className={`mt-1 text-sm ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Visualize defaults e ajuste o prompt de solução LeetCode.</p>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
         <section className={`rounded-2xl border p-4 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
           <h3 className={`mb-3 text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Defaults do backend</h3>
           <div className="space-y-3">
-            <TextAreaField label="Prompt de geracao" value={defaults?.prompt_generation || ""} readOnly isDarkMode={isDarkMode} rows={8} />
-            <TextAreaField label="Prompt de traducao (LinkedIn)" value={defaults?.prompt_translation || ""} readOnly isDarkMode={isDarkMode} rows={8} />
+            <TextAreaField label="Prompt de geração" value={defaults?.prompt_generation || ""} readOnly isDarkMode={isDarkMode} rows={8} />
+            <TextAreaField label="Prompt de tradução (LinkedIn)" value={defaults?.prompt_translation || ""} readOnly isDarkMode={isDarkMode} rows={8} />
           </div>
         </section>
 
         <section className={`rounded-2xl border p-4 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
-          <h3 className={`mb-3 text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Prompt de solucao LeetCode</h3>
+          <h3 className={`mb-3 text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Prompt de solução LeetCode</h3>
           <form className="space-y-3" onSubmit={handleSave}>
             <label className="block">
               <span className={`mb-1 block text-xs font-medium ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>
@@ -117,7 +117,7 @@ export default function PromptsPage() {
               </p>
             </label>
             <TextAreaField
-              label="Template editavel"
+              label="Template editável"
               value={solutionPrompt}
               onChange={setSolutionPrompt}
               isDarkMode={isDarkMode}
@@ -136,7 +136,7 @@ export default function PromptsPage() {
                 onClick={() => setSolutionPrompt(defaults?.leetcode_solution_prompt || "")}
                 className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${isDarkMode ? "bg-slate-700 text-slate-100 hover:bg-slate-600" : "bg-slate-200 text-slate-800 hover:bg-slate-300"}`}
               >
-                Restaurar padrao
+                Restaurar padrão
               </button>
             </div>
           </form>

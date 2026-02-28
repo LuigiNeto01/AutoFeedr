@@ -15,10 +15,10 @@ export default function LoginPage() {
           <div>
             <p className="text-xs uppercase tracking-[0.45em] text-white/70">AutoFeedr</p>
             <h2 className="mt-6 max-w-xl text-4xl font-semibold leading-tight text-white sm:text-5xl">
-              Acesse seu painel para gerenciar automacoes e conteudo
+              Acesse seu painel para gerenciar automações e conteúdo
             </h2>
             <p className="mt-4 max-w-lg text-base text-white/75">
-              Login e criacao de conta em um unico fluxo, usando os endpoints do backend.
+              Login e criação de conta em um único fluxo, usando os endpoints do backend.
             </p>
           </div>
         </div>
