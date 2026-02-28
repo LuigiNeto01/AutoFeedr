@@ -198,17 +198,27 @@ export default function DashboardPage() {
               <div
                 key={item.id}
                 className={`grid gap-2 rounded-xl border p-3 md:grid-cols-[7rem_1fr_7rem_8rem] ${
-                  isDarkMode ? "border-slate-700 bg-slate-800/55" : "border-slate-200 bg-slate-50"
+                  isDarkMode
+                    ? "group relative isolate overflow-hidden border-slate-600 bg-gradient-to-br from-slate-900/96 to-slate-800/90 shadow-[0_14px_24px_-20px_rgba(15,23,42,0.95)] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-sky-500/40 hover:shadow-[0_20px_30px_-20px_rgba(56,189,248,0.28)]"
+                    : "group relative isolate overflow-hidden border-slate-200 bg-white/95 shadow-[0_14px_24px_-20px_rgba(15,23,42,0.35)] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_20px_30px_-20px_rgba(15,23,42,0.30)]"
                 }`}
               >
-                <p className={`text-xs uppercase tracking-wide ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{item.source}</p>
-                <p className={`truncate text-sm ${isDarkMode ? "text-slate-100" : "text-slate-900"}`} title={item.title}>
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none absolute inset-0 rounded-[inherit] bg-gradient-to-r transition-opacity duration-300 ${
+                    isDarkMode
+                      ? "from-sky-400/10 via-transparent to-indigo-400/10 opacity-0 group-hover:opacity-100"
+                      : "from-sky-500/10 via-transparent to-indigo-500/10 opacity-0 group-hover:opacity-100"
+                  }`}
+                />
+                <p className={`relative z-10 text-xs uppercase tracking-wide ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{item.source}</p>
+                <p className={`relative z-10 truncate text-sm ${isDarkMode ? "text-slate-100" : "text-slate-900"}`} title={item.title}>
                   {item.title}
                 </p>
-                <p className={`text-xs font-semibold uppercase ${statusColor(item.status)}`}>
+                <p className={`relative z-10 text-xs font-semibold uppercase ${statusColor(item.status)}`}>
                   {item.status}
                 </p>
-                <p className={`text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{formatTime(item.createdAt)}</p>
+                <p className={`relative z-10 text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{formatTime(item.createdAt)}</p>
               </div>
             ))
           ) : (
@@ -222,19 +232,55 @@ export default function DashboardPage() {
 
 function KpiCard({ label, value, isDarkMode }) {
   return (
-    <div className={`rounded-2xl border px-4 py-4 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
-      <p className={`text-[11px] uppercase tracking-[0.2em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{label}</p>
-      <p className={`mt-2 text-2xl font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{value}</p>
-      <p className={`text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>últimas 24h</p>
+    <div
+      className={`group relative isolate overflow-hidden rounded-2xl border px-4 py-4 backdrop-blur-sm transition-all duration-300 ease-out hover:-translate-y-0.5 ${
+        isDarkMode
+          ? "border-slate-600 bg-gradient-to-br from-slate-900/98 to-slate-800/90 shadow-[0_18px_28px_-20px_rgba(15,23,42,0.95)] hover:border-sky-500/45 hover:shadow-[0_24px_34px_-20px_rgba(56,189,248,0.34)]"
+          : "border-slate-200 bg-white shadow-[0_18px_28px_-20px_rgba(15,23,42,0.35)] hover:border-slate-300 hover:shadow-[0_24px_34px_-20px_rgba(15,23,42,0.30)]"
+      }`}
+    >
+      <span
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-0 rounded-[inherit] bg-gradient-to-r transition-opacity duration-300 ${
+          isDarkMode
+            ? "from-sky-400/15 via-transparent to-indigo-400/15 opacity-0 group-hover:opacity-100"
+            : "from-sky-500/10 via-transparent to-indigo-500/10 opacity-0 group-hover:opacity-100"
+        }`}
+      />
+      <span
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-x-6 -bottom-2 h-5 rounded-full blur-xl transition-opacity duration-300 ${
+          isDarkMode
+            ? "bg-sky-300/20 opacity-0 group-hover:opacity-70"
+            : "bg-sky-500/20 opacity-0 group-hover:opacity-70"
+        }`}
+      />
+      <p className={`relative z-10 text-[11px] uppercase tracking-[0.2em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{label}</p>
+      <p className={`relative z-10 mt-2 text-2xl font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{value}</p>
+      <p className={`relative z-10 text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>últimas 24h</p>
     </div>
   );
 }
 
 function InfoPill({ label, value, isDarkMode }) {
   return (
-    <div className={`rounded-xl border px-3 py-2 text-center text-xs ${isDarkMode ? "border-slate-700 bg-slate-800/55" : "border-slate-200 bg-slate-50"}`}>
-      <span className={`mr-1 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{label}:</span>
-      <span className={`font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{value}</span>
+    <div
+      className={`group relative isolate overflow-hidden rounded-xl border px-3 py-2 text-center text-xs backdrop-blur-sm transition-all duration-300 ease-out hover:-translate-y-0.5 ${
+        isDarkMode
+          ? "border-slate-600 bg-gradient-to-br from-slate-900/92 to-slate-800/80 shadow-[0_12px_22px_-22px_rgba(15,23,42,0.95)] hover:border-sky-500/40"
+          : "border-slate-200 bg-white/95 shadow-[0_12px_22px_-22px_rgba(15,23,42,0.35)] hover:border-slate-300"
+      }`}
+    >
+      <span
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-0 rounded-[inherit] bg-gradient-to-r transition-opacity duration-300 ${
+          isDarkMode
+            ? "from-sky-400/10 via-transparent to-indigo-400/10 opacity-0 group-hover:opacity-100"
+            : "from-sky-500/10 via-transparent to-indigo-500/10 opacity-0 group-hover:opacity-100"
+        }`}
+      />
+      <span className={`relative z-10 mr-1 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{label}:</span>
+      <span className={`relative z-10 font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{value}</span>
     </div>
   );
 }
@@ -249,12 +295,26 @@ function StatusRow({ status, value, isDarkMode }) {
   };
 
   return (
-    <div className={`flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
-      <div className="inline-flex items-center gap-2">
+    <div
+      className={`group relative isolate flex items-center justify-between overflow-hidden rounded-lg border px-2.5 py-1.5 text-xs transition-all duration-300 ease-out hover:-translate-y-0.5 ${
+        isDarkMode
+          ? "border-slate-600 bg-gradient-to-r from-slate-900/96 to-slate-800/88 shadow-[0_10px_18px_-20px_rgba(15,23,42,0.95)] hover:border-sky-500/40"
+          : "border-slate-200 bg-white shadow-[0_10px_18px_-20px_rgba(15,23,42,0.35)] hover:border-slate-300"
+      }`}
+    >
+      <span
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-0 rounded-[inherit] bg-gradient-to-r transition-opacity duration-300 ${
+          isDarkMode
+            ? "from-sky-400/10 via-transparent to-indigo-400/10 opacity-0 group-hover:opacity-100"
+            : "from-sky-500/10 via-transparent to-indigo-500/10 opacity-0 group-hover:opacity-100"
+        }`}
+      />
+      <div className="relative z-10 inline-flex items-center gap-2">
         <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: colors[status] }} />
         <span className={`uppercase ${isDarkMode ? "text-slate-300" : "text-slate-600"}`}>{status}</span>
       </div>
-      <span className={`font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{value}</span>
+      <span className={`relative z-10 font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{value}</span>
     </div>
   );
 }
